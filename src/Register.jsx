@@ -1,209 +1,218 @@
 import { useState } from "react";
 import "./login.css";
 import { Link } from "react-router-dom";
-import { supabase } from "./supabaseClient.js"; 
+import { supabase } from "./supabaseClient.js";
 
 const roles = ["student", "vendor"];
 
 const Register = () => {
-  const [activeRole, setActiveRole] = useState("student");
-  const [email, setEmail] = useState("");
-  const [studentId, setStudentId] = useState(""); // Student-specific
-  const [fname, setFName] = useState("");
-  const [lname, setLName] = useState("");
-  const [vendorName, setVendorName] = useState(""); // Vendor-specific
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+    const [activeRole, setActiveRole] = useState("student");
+    const [email, setEmail] = useState("");
+    const [studentId, setStudentId] = useState(""); // Student-specific
+    const [fname, setFName] = useState("");
+    const [lname, setLName] = useState("");
+    const [vendorName, setVendorName] = useState(""); // Vendor-specific
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleRegister = async (role) => {
-    if (password !== confirmPassword) {
-      alert("Passwords do not match!");
-      return;
-    }
-
-    try {
-      // 1. Sign up user with role in metadata
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
-        {
-          email,
-          password,
-          options: {
-            data: { role },
-          },
+    const handleRegister = async (role) => {
+        if (password !== confirmPassword) {
+            alert("Passwords do not match!");
+            return;
         }
-      );
 
-      if (signUpError) throw signUpError;
 
-      const userId = signUpData.user.id;
 
-      if (role === "student") {
-        // 2a. Insert into `student` table
-        const { error: studentInsertError } = await supabase.from("student").insert({
-          id: userId,
-          student_number: studentId,
-          fname,
-          lname,
-          email,
-        });
-        if (studentInsertError) throw studentInsertError;
-      } else if (role === "vendor") {
-        // 2b. Insert into `vendor` table
-        const { error: vendorInsertError } = await supabase.from("vendor").insert({
-          id: userId,
-          name: vendorName,
-          datejoined: new Date().toISOString().split("T")[0],
-          approval_status: "pending",
-          email,
-        });
-        if (vendorInsertError) throw vendorInsertError;
-      }
+        try {
+            // 1. Sign up user with role in metadata
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
+                {
+                    /*email: "testuser123@example.com",
+                    password: "securepass123",*/
+                    email,
+                    password,
+                    options: {
+                        data: { role },
+                    },
+                }
+            );
 
-      alert(`Registration successful as ${role}! Please check your email to verify your account.`);
 
-      // Clear fields
-      setEmail("");
-      setStudentId("");
-      setVendorName("");
-      setPassword("");
-      setConfirmPassword("");
-      setFName("");
-      setLName("");
+            if (signUpError) {
+                console.error(signUpError); // see the full error object
+                throw signUpError;
+            }
 
-    } catch (error) {
-      alert(`Error: ${error.message}`);
-    }
-  };
+            const userId = signUpData.user.id;
 
-  return (
-    <div className="login-page">
-      <div className="login-card">
-        <div className="login-header">
-          <h2>Order & Go Campus</h2>
-          <p>Create your account</p>
-        </div>
+            if (role === "student") {
+                // 2a. Insert into `student` table
+                const { error: studentInsertError } = await supabase.from("students").insert({
 
-        <div className="tabs">
-          <div className="tab-buttons">
-            {roles.map((role) => (
-              <button
-                key={role}
-                className={`tab-button ${activeRole === role ? "active" : ""}`}
-                onClick={() => {
-                  setActiveRole(role);
-                  // Reset fields on tab switch
-                  setEmail("");
-                  setStudentId("");
-                  setVendorName("");
-                  setPassword("");
-                  setConfirmPassword("");
-                  setFName("");
-                  setLName("");
-                }}
-              >
-                {role.charAt(0).toUpperCase() + role.slice(1)}
-              </button>
-            ))}
-          </div>
+                    student_number: studentId,
+                    fname,
+                    lname,
+                    email,
+                });
+                if (studentInsertError) throw studentInsertError;
+            } else if (role === "vendor") {
+                // 2b. Insert into `vendor` table
+                const { error: vendorInsertError } = await supabase.from("vendors").insert({
+                    id: userId,
+                    name: vendorName,
+                    datejoined: new Date().toISOString().split("T")[0],
+                    approval_status: "pending",
+                    email,
+                });
+                if (vendorInsertError) throw vendorInsertError;
+            }
 
-          {activeRole === "student" && (
-            <div className="tab-content" key="student">
-              <div className="form-group">
-                <label htmlFor="studentId">Student ID</label>
-                <input
-                  id="studentId"
-                  type="text"
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  placeholder="Enter your student ID"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="fname">First Name</label>
-                <input
-                  id="fname"
-                  type="text"
-                  value={fname}
-                  onChange={(e) => setFName(e.target.value)}
-                  placeholder="Enter your first name"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="lname">Last Name</label>
-                <input
-                  id="lname"
-                  type="text"
-                  value={lname}
-                  onChange={(e) => setLName(e.target.value)}
-                  placeholder="Enter your last name"
-                />
-              </div>
+            alert(`Registration successful as ${role}! Please check your email to verify your account.`);
+
+            // Clear fields
+            setEmail("");
+            setStudentId("");
+            setVendorName("");
+            setPassword("");
+            setConfirmPassword("");
+            setFName("");
+            setLName("");
+
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        }
+    };
+
+    return (
+        <div className="login-page">
+            <div className="login-card">
+                <div className="login-header">
+                    <h2>Order & Go Campus</h2>
+                    <p>Create your account</p>
+                </div>
+
+                <div className="tabs">
+                    <div className="tab-buttons">
+                        {roles.map((role) => (
+                            <button
+                                key={role}
+                                className={`tab-button ${activeRole === role ? "active" : ""}`}
+                                onClick={() => {
+                                    setActiveRole(role);
+                                    
+                                    // Reset fields on tab switch
+                                    setEmail("");
+                                    setStudentId("");
+                                    setVendorName("");
+                                    setPassword("");
+                                    setConfirmPassword("");
+                                    setFName("");
+                                    setLName("");
+                                }}
+                            >
+                                {role.charAt(0).toUpperCase() + role.slice(1)}
+                            </button>
+                        ))}
+                    </div>
+
+                    {activeRole === "student" && (
+                        <div className="tab-content" key="student">
+                            <div className="form-group">
+                                <label htmlFor="studentId">Student ID</label>
+                                <input
+                                    id="studentId"
+                                    type="text"
+                                    value={studentId}
+                                    onChange={(e) => setStudentId(e.target.value)}
+                                    placeholder="Enter your student ID"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="fname">First Name</label>
+                                <input
+                                    id="fname"
+                                    type="text"
+                                    value={fname}
+                                    onChange={(e) => setFName(e.target.value)}
+                                    placeholder="Enter your first name"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="lname">Last Name</label>
+                                <input
+                                    id="lname"
+                                    type="text"
+                                    value={lname}
+                                    onChange={(e) => setLName(e.target.value)}
+                                    placeholder="Enter your last name"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {activeRole === "vendor" && (
+                        <div className="tab-content" key="vendor">
+                            <div className="form-group">
+                                <label htmlFor="vendorName">Vendor Name</label>
+                                <input
+                                    id="vendorName"
+                                    type="text"
+                                    value={vendorName}
+                                    onChange={(e) => setVendorName(e.target.value)}
+                                    placeholder="Enter your vendor name"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Common Fields */}
+                    <div className="form-group">
+                        <label htmlFor="email">Email</label>
+                        <input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Enter your email"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="password">Password</label>
+                        <input
+                            id="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter password"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="confirmPassword">Confirm Password</label>
+                        <input
+                            id="confirmPassword"
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Confirm password"
+                        />
+                    </div>
+
+                    <button
+                        className="primary-button"
+                        onClick={() => handleRegister(activeRole)}
+                    >
+                        Register as {activeRole.charAt(0).toUpperCase() + activeRole.slice(1)}
+                    </button>
+
+                    <div className="register-text">
+                        Already have an account? <Link to="/login">Login</Link>
+                    </div>
+                </div>
             </div>
-          )}
-
-          {activeRole === "vendor" && (
-            <div className="tab-content" key="vendor">
-              <div className="form-group">
-                <label htmlFor="vendorName">Vendor Name</label>
-                <input
-                  id="vendorName"
-                  type="text"
-                  value={vendorName}
-                  onChange={(e) => setVendorName(e.target.value)}
-                  placeholder="Enter your vendor name"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Common Fields */}
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm password"
-            />
-          </div>
-
-          <button
-            className="primary-button"
-            onClick={() => handleRegister(activeRole)}
-          >
-            Register as {activeRole.charAt(0).toUpperCase() + activeRole.slice(1)}
-          </button>
-
-          <div className="register-text">
-            Already have an account? <Link to="/login">Login</Link>
-          </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Register;
