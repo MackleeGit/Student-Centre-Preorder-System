@@ -2,7 +2,7 @@ import React from "react";
 import { Clock, Users, Smartphone } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import "./Index.css";
+import "./index.css";
 
 
 const Index = () => {
