@@ -32,7 +32,7 @@ const Index = () => {
       <section className="features">
         <div className="container">
           <div className="features-header text-center">
-            <h2 className="features-title">Why Choose Order & Go?</h2>
+            <h2 className="features-title">Why Choose Us?</h2>
             <p className="features-subtitle">
               Revolutionizing campus dining with smart preordering technology
             </p>

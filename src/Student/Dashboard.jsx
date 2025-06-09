@@ -3,16 +3,23 @@ import { Search, ShoppingCart, Bell, Clock } from "lucide-react";
 import "../css/dashboard.css";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { checkAuth } from "../utils/authUtils.js";
+import { checkAuth, logoutUser } from "../utils/authUtils.js";
+import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
 
 const StudentDashboard = () => {
-    
+
     const navigate = useNavigate();
-    
+
     useEffect(() => {
         checkAuth(navigate);
     }, []);
 
+    const handleLogout = async () => {
+        const confirmed = await showConfirmToast("Are you sure you wish to log out?");
+        if (confirmed) {
+            await logoutUser(navigate);
+        }
+    };
 
     const [searchQuery, setSearchQuery] = useState("");
     const [showNotifications, setShowNotifications] = useState(false);
@@ -89,6 +96,13 @@ const StudentDashboard = () => {
                                 <ShoppingCart size={16} />
                             </a>
                         </button>
+                        <button
+                            className="btn btn-outline"
+                            onClick={handleLogout}
+                            >
+                            Log Out
+                        </button>
+                        
                         <button className="btn btn-outline">
                             <a href="/student/profile" style={{ color: "inherit", textDecoration: "none" }}>Profile</a>
                         </button>

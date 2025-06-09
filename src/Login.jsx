@@ -27,7 +27,7 @@ const Login = () => {
     <div className="login-page">
       <div className="login-card">
         <div className="login-header">
-          <h2>Order & Go Campus</h2>
+          <h2>STC Preorder System</h2>
           <p>Sign in to your account</p>
         </div>
 

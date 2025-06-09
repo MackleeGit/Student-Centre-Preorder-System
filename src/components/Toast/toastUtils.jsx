@@ -85,7 +85,7 @@ export const showConfirmToast = (message, title = 'Confirm') => {
     const toastId = toast.custom((t) => (
       <div
         className={`toast-container ${t.visible ? 'toast-enter' : 'toast-exit'}`}
-        style={{confirmToastStyle}}
+        style={confirmToastStyle}
       >
         <div>
           <div style={{ fontWeight: '600', marginBottom: 'var(--spacing-1)' }}>

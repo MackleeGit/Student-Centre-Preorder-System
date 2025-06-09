@@ -47,6 +47,7 @@ export const progressBarStyle = {
 
 
 export const confirmToastStyle = {
+  ...baseToastStyle,
   background: 'var(--card)',
   color: 'var(--card-foreground)',
   border: '1px solid var(--border)',
@@ -65,7 +66,7 @@ export const confirmToastStyle = {
 
 export const cancelToastBtn = {
   padding: 'var(--spacing-2) var(--spacing-3)',
-  background: 'var(--secondary)',
+  background: 'var(primary)',
   color: 'var(--secondary-foreground)',
   border: 'none',
   borderRadius: 'var(--radius)',

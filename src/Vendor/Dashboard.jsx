@@ -3,22 +3,31 @@ import { Bell, Package, DollarSign, TrendingUp, Clock, User } from "lucide-react
 import "../css/dashboard.css";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { checkAuth } from "../utils/authUtils.js";
+import { checkAuth, logoutUser } from "../utils/authUtils.js";
+import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
+
 
 const VendorDashboard = () => {
-    
-    const navigate = useNavigate();
-    
-    useEffect(() => {
-        checkAuth(navigate);
-    }, []);
-    
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    checkAuth(navigate);
+  }, []);
+
+  const handleLogout = async () => {
+    const confirmed = await showConfirmToast("Are you sure you wish to log out?");
+    if (confirmed) {
+      await logoutUser(navigate);
+    }
+  };
+
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Mock data
   const vendorName = "Pizza Palace";
   const vendorRating = 4.5;
-  
+
   const stats = {
     todayOrders: 23,
     todayRevenue: 456.78,
@@ -27,57 +36,57 @@ const VendorDashboard = () => {
   };
 
   const processingOrders = [
-    { 
-      id: 1, 
-      student: "John Doe", 
-      items: ["Margherita Pizza x2", "Garlic Bread x1"], 
-      total: 25.99, 
-      status: "pending", 
+    {
+      id: 1,
+      student: "John Doe",
+      items: ["Margherita Pizza x2", "Garlic Bread x1"],
+      total: 25.99,
+      status: "pending",
       orderTime: "2 min ago",
       pickupTime: "15 min"
     },
-    { 
-      id: 2, 
-      student: "Jane Smith", 
-      items: ["Pepperoni Pizza x1", "Coke x1"], 
-      total: 18.50, 
-      status: "processing", 
+    {
+      id: 2,
+      student: "Jane Smith",
+      items: ["Pepperoni Pizza x1", "Coke x1"],
+      total: 18.50,
+      status: "processing",
       orderTime: "5 min ago",
       pickupTime: "10 min"
     },
-    { 
-      id: 3, 
-      student: "Mike Johnson", 
-      items: ["Veggie Pizza x1", "Water x1"], 
-      total: 22.99, 
-      status: "ready", 
+    {
+      id: 3,
+      student: "Mike Johnson",
+      items: ["Veggie Pizza x1", "Water x1"],
+      total: 22.99,
+      status: "ready",
       orderTime: "8 min ago",
       pickupTime: "Ready!"
     },
-    { 
-      id: 4, 
-      student: "Sarah Wilson", 
-      items: ["Hawaiian Pizza x1"], 
-      total: 16.99, 
-      status: "processing", 
+    {
+      id: 4,
+      student: "Sarah Wilson",
+      items: ["Hawaiian Pizza x1"],
+      total: 16.99,
+      status: "processing",
       orderTime: "12 min ago",
       pickupTime: "8 min"
     },
-    { 
-      id: 5, 
-      student: "Tom Brown", 
-      items: ["Meat Loaf x1", "Fries x2"], 
-      total: 24.50, 
-      status: "pending", 
+    {
+      id: 5,
+      student: "Tom Brown",
+      items: ["Meat Loaf x1", "Fries x2"],
+      total: 24.50,
+      status: "pending",
       orderTime: "15 min ago",
       pickupTime: "20 min"
     },
-    { 
-      id: 6, 
-      student: "Lisa Davis", 
-      items: ["Margherita Pizza x1", "Salad x1"], 
-      total: 19.99, 
-      status: "ready", 
+    {
+      id: 6,
+      student: "Lisa Davis",
+      items: ["Margherita Pizza x1", "Salad x1"],
+      total: 19.99,
+      status: "ready",
       orderTime: "18 min ago",
       pickupTime: "Ready!"
     }
@@ -113,7 +122,7 @@ const VendorDashboard = () => {
           </div>
           <div className="flex items-center gap-4">
             <div className="notification-dropdown">
-              <button 
+              <button
                 className="btn btn-outline btn-icon"
                 onClick={() => setShowNotifications(!showNotifications)}
               >
@@ -133,9 +142,15 @@ const VendorDashboard = () => {
                   ))}
                 </div>
               )}
-              
+
             </div>
 
+            <button
+              className="btn btn-outline"
+              onClick={handleLogout}
+            >
+              Log Out
+            </button>
             <button className="btn btn-outline">
               <a href="/vendor/profile" style={{ color: "inherit", textDecoration: "none" }}>Profile</a>
             </button>
@@ -184,8 +199,8 @@ const VendorDashboard = () => {
             </div>
             <div className="card-content">
               {processingOrders.map((order) => (
-                <div 
-                  key={order.id} 
+                <div
+                  key={order.id}
                   className="order-item clickable-order"
                   onClick={() => handleOrderClick(order.id)}
                 >
@@ -212,7 +227,7 @@ const VendorDashboard = () => {
                       {order.status}
                     </span>
                     {order.status === 'pending' && (
-                      <button 
+                      <button
                         className="btn btn-sm btn-primary"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -223,7 +238,7 @@ const VendorDashboard = () => {
                       </button>
                     )}
                     {order.status === 'processing' && (
-                      <button 
+                      <button
                         className="btn btn-sm btn-primary"
                         onClick={(e) => {
                           e.stopPropagation();

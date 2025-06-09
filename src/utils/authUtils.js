@@ -22,23 +22,33 @@ export const registerUser = async ({ role, email, password, extraFields }) => {
 
   const userId = signUpData.user.id;
 
-  if (role === "student") {
-    const { error } = await supabase.from("students").insert({
-      student_number: extraFields.studentId,
-      fname: extraFields.fname,
-      lname: extraFields.lname,
-      email
-    });
-    if (error) throw error;
-  } else if (role === "vendor") {
-    const { error } = await supabase.from("vendors").insert({
-      id: userId,
-      name: extraFields.vendorName,
-      email,
-      datejoined: new Date().toISOString().split("T")[0],
-      approval_status: "pending"
-    });
-    if (error) throw error;
+  try {
+    if (role === "student") {
+      const { error } = await supabase.from("students").insert({
+        student_number: extraFields.studentId,
+        fname: extraFields.fname,
+        lname: extraFields.lname,
+        email
+      });
+      if (error) throw error;
+    } else if (role === "vendor") {
+      const { error } = await supabase.from("vendors").insert({
+        id: userId,
+        name: extraFields.vendorName,
+        email,
+
+        /*Do this soon*/
+        image_url: "Remember to add this",
+
+
+        date_joined: new Date().toISOString().split("T")[0],
+        approval_status: "pending"
+      });
+      if (error) throw error;
+    }
+  } catch (dbError) {
+    //Rollback auth user if DB insert fails
+    
   }
 };
 
