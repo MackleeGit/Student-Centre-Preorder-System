@@ -1,7 +1,11 @@
 import { useState } from "react";
 import "./login.css";
 import { Link } from "react-router-dom";
-import { supabase } from "./supabaseClient.js";
+import { useNavigate } from "react-router-dom";
+import { registerUser, loginUser } from "./utils/authUtils.js";
+import { showSuccessToast, showErrorToast, showConfirmToast } from "./components/Toast/toastUtils.jsx";
+
+
 
 const roles = ["student", "vendor"];
 
@@ -14,72 +18,35 @@ const Register = () => {
     const [vendorName, setVendorName] = useState(""); // Vendor-specific
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const navigate = useNavigate();
 
     const handleRegister = async (role) => {
         if (password !== confirmPassword) {
-            alert("Passwords do not match!");
+            showErrorToast("Passwords do not match!", "Registration Error");
             return;
         }
 
-
+        const extraFields = {
+            studentId,
+            fname,
+            lname,
+            vendorName
+        };
 
         try {
-            // 1. Sign up user with role in metadata
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp(
-                {
-                    /*email: "testuser123@example.com",
-                    password: "securepass123",*/
-                    email,
-                    password,
-                    options: {
-                        data: { role },
-                    },
-                }
+            await registerUser({ role, email, password, extraFields });
+           
+            const shouldLogin = await showConfirmToast(
+                `Registration successful as ${role}! Click OK to login.`,
+                "Registration Complete"
             );
-
-
-            if (signUpError) {
-                console.error(signUpError); // see the full error object
-                throw signUpError;
+            
+            if (shouldLogin) {
+                await loginUser({ email, password, role, navigate });
             }
-
-            const userId = signUpData.user.id;
-
-            if (role === "student") {
-                // 2a. Insert into `student` table
-                const { error: studentInsertError } = await supabase.from("students").insert({
-
-                    student_number: studentId,
-                    fname,
-                    lname,
-                    email,
-                });
-                if (studentInsertError) throw studentInsertError;
-            } else if (role === "vendor") {
-                // 2b. Insert into `vendor` table
-                const { error: vendorInsertError } = await supabase.from("vendors").insert({
-                    id: userId,
-                    name: vendorName,
-                    datejoined: new Date().toISOString().split("T")[0],
-                    approval_status: "pending",
-                    email,
-                });
-                if (vendorInsertError) throw vendorInsertError;
-            }
-
-            alert(`Registration successful as ${role}! Please check your email to verify your account.`);
-
-            // Clear fields
-            setEmail("");
-            setStudentId("");
-            setVendorName("");
-            setPassword("");
-            setConfirmPassword("");
-            setFName("");
-            setLName("");
-
+            
         } catch (error) {
-            alert(`Error: ${error.message}`);
+            showErrorToast(error.message, "Registration Failed");
         }
     };
 
@@ -99,7 +66,7 @@ const Register = () => {
                                 className={`tab-button ${activeRole === role ? "active" : ""}`}
                                 onClick={() => {
                                     setActiveRole(role);
-                                    
+
                                     // Reset fields on tab switch
                                     setEmail("");
                                     setStudentId("");

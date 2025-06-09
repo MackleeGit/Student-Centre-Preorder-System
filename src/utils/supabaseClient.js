@@ -9,7 +9,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 const customFetch = (url, options = {}) => {
   return fetch(url, {
     ...options,
-    credentials: "omit", // 👈 This is a fix
+    credentials: "omit", // This is a fix
   });
 };
 

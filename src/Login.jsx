@@ -1,6 +1,9 @@
 import { useState } from "react";
 import "./login.css";
+import { useNavigate } from "react-router-dom";
+import { loginUser } from "./utils/authUtils.js";
 import { Link } from "react-router-dom";
+import { showSuccessToast, showErrorToast, showConfirmToast } from "./components/Toast/toastUtils.jsx";
 
 const roles = ["student", "vendor"];
 
@@ -8,13 +11,15 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [activeRole, setActiveRole] = useState("student");
+  const navigate = useNavigate(); // SPA-safe navigation
 
-  const handleLogin = (role) => {
-    console.log(`Login attempt as ${role}:`, { email, password });
-    if (role === "student") {
-      window.location.href = "/dashboard/student";
-    } else if (role === "vendor") {
-      window.location.href = "/dashboard/vendor";
+
+
+  const handleLogin = async (role) => {
+    try {
+      await loginUser({ email, password, role, navigate });
+    } catch (error) {
+      showErrorToast(error.message, "Login Failed");
     }
   };
 
