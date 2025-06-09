@@ -98,4 +98,23 @@ export const useRealtimeNotifications = (userId) => {
   };
 
   return { notifications, loading, markAsRead };
+
+  const formatNotificationTime = (timestamp) => {
+    const now = new Date();
+    const notifTime = new Date(timestamp);
+    const diffMs = now - notifTime;
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+    return `${Math.floor(diffMins / 1440)}d ago`;
+  };
+
+
+
+
+
+
 };
+

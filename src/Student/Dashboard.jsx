@@ -15,12 +15,24 @@ const StudentDashboard = () => {
     const navigate = useNavigate();
     const [UserData, setUserData] = useState(null);
     const [loadingUser, setLoadingUser] = useState(true);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+
+
+    const [menuResults, setMenuResults] = useState([]);
+    const [vendorResults, setVendorResults] = useState([]);
+    const [activeOrders, setActiveOrders] = useState([]);
+    const [recentOrders, setRecentOrders] = useState([]);
+
+    const [vendors, setVendors] = useState([]);
+
 
 
 
     useEffect(() => {
         checkAuth(navigate);
         checkUserRole("student", navigate);
+
 
         const fetchStudent = async () => {
             const { data: user, error: authError } = await supabase.auth.getUser();
@@ -34,12 +46,12 @@ const StudentDashboard = () => {
 
             const { data: student, error: studentError } = await supabase
                 .from("students")
-                .select("student_number, name")
+                .select("student_number, fname,lname")
                 .eq("email", email)
                 .maybeSingle();
 
             if (studentError || !student) {
-                console.error("Student not found", vendorError);
+                console.error("Student not found", studentError);
                 navigate("/login");
                 return;
             }
@@ -47,12 +59,75 @@ const StudentDashboard = () => {
             setUserData(student);
             setLoadingUser(false);
         };
-
         fetchStudent();
+
+    
+
+        const fetchVendors = async () => {
+
+            const { data: vendors, error } = await supabase
+                .from('vendors')
+                .select('id, name, image_url')
+                .eq('availability', 'open');
+
+            if (vendors) {
+                // Randomize order client-side
+                const shuffledVendors = vendors.sort(() => 0.5 - Math.random());
+                setVendors(shuffledVendors);  // <-- use it here inside the if block
+            } else if (error) {
+                console.error("Error fetching Available Vendors", error);
+            }
+
+        };
+        fetchVendors();
+
+
+
+
+
 
     }, []);
 
 
+
+
+    useEffect(() => {
+    if (!UserData?.student_number) return;
+
+    const fetchActiveOrders = async () => {
+        const { data, error } = await supabase
+            .from("orders")
+            .select("orderid, vendorid, order_status, created_at, time_accepted")
+            .eq("student_number", UserData.student_number)
+            .in("order_status", ["pending", "processing", "ready"])
+            .order("created_at", { ascending: false });
+
+        if (!error) {
+            setActiveOrders(data);
+        } else {
+            console.error("Error fetching active orders:", error);
+        }
+    };
+    fetchActiveOrders();
+
+    const fetchRecentOrders = async () => {
+        const { data, error } = await supabase
+            .from("orders")
+            .select("orderid, vendorid, order_status,created_at")
+            .eq("student_number", UserData.student_number)
+            .eq("order_status", "collected")
+            .order("created_at", { ascending: false })
+            .limit(5);
+
+        if (!error) {
+            setRecentOrders(data);
+        } else {
+            console.error("Error fetching recent orders:", error);
+        }
+    };
+    fetchRecentOrders();
+
+}, [UserData]);
     // Custom hook using vendor ID
     const { notifications, loading: notificationsLoading, markAsRead, } = useRealtimeNotifications(UserData?.id);
 
@@ -68,27 +143,49 @@ const StudentDashboard = () => {
         }
     };
 
-    const [searchQuery, setSearchQuery] = useState("");
-    const [showNotifications, setShowNotifications] = useState(false);
+    const performSearch = async (searchTerm) => {
+        if (!searchTerm) {
+            setMenuResults([]);
+            setVendorResults([]);
+            return;
+        }
+        // Search Menu Items
+        const { data: menuItems, error: menuError } = await supabase
+            .from('menuitems')
+            .select('menuitemid, name, price, vendorid')
+            .ilike('name', `%${searchTerm}%`);
+
+        if (!menuError && menuItems) {
+            setMenuResults(menuItems);
+        } else {
+            setMenuResults([]);
+        }
+
+        // Search Vendors
+        const { data: vendorResults, error: vendorError } = await supabase
+            .from('vendors')
+            .select('id, name, image_url')
+            .ilike('name', `%${searchTerm}%`);
+
+        if (!vendorError && vendorResults) {
+            setVendorResults(vendorResults);
+        } else {
+            setVendorResults([]);
+        }
+    };
+
+    const handleSearchChange = (e) => {
+        const term = e.target.value;
+        setSearchQuery(term);
+        performSearch(term);
+    };
+
+
 
     // Mock data
-    const studentName = "John Doe";
+    const studentName = `${UserData?.fname} ${UserData?.lname}`;
 
-    const activeOrders = [
-        { id: 1, vendor: "Pizza Palace", status: "processing", total: 15.99, items: "1x Margherita Pizza, 1x Garlic Bread", estimatedTime: "15 min" },
-        { id: 2, vendor: "Burger Barn", status: "ready", total: 12.50, items: "1x Classic Burger, 1x Fries", estimatedTime: "Ready!" },
-    ];
 
-    const vendors = [
-        { id: 1, name: "Pizza Palace", items: 12, rating: 4.5, available: true },
-        { id: 2, name: "Burger Barn", items: 8, rating: 4.2, available: true },
-        { id: 3, name: "Healthy Bowls", items: 15, rating: 4.7, available: false },
-    ];
-
-    const recentOrders = [
-        { id: 3, vendor: "Sushi Corner", status: "collected", total: 18.75, date: "Yesterday" },
-        { id: 4, vendor: "Coffee House", status: "collected", total: 8.50, date: "2 days ago" },
-    ];
 
 
     const searchResults = [
@@ -100,6 +197,7 @@ const StudentDashboard = () => {
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.vendor.toLowerCase().includes(searchQuery.toLowerCase())
     ) : [];
+
 
 
 
@@ -143,16 +241,31 @@ const StudentDashboard = () => {
                             {showNotifications && (
                                 <div className="notification-menu">
                                     <div style={{ padding: "var(--spacing-3)", borderBottom: "1px solid var(--border)" }}>
-                                        <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>Notifications (48hrs)</div>
+                                        <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>Notifications</div>
                                     </div>
                                     {notifications.map((notif) => (
-                                        <div key={notif.id} className="notification-item">
+                                        <div key={notif.notifid} className="notification-item">
                                             <div className="notification-title">{notif.message}</div>
-                                            <div className="notification-time">{notif.time}</div>
+                                            <div className="notification-time">{formatNotificationTime(notif.timestamp)}</div>
+
+                                            {!notif.read && (
+
+                                                <button
+                                                    onClick={() => markAsRead(notif.notifid)}
+                                                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow" >
+                                                    Mark as Read
+                                                </button>
+
+
+                                            )}
+
+
+
                                         </div>
                                     ))}
                                 </div>
                             )}
+
                         </div>
                         <button className="btn btn-outline btn-icon">
                             <a href="/student/cart" style={{ color: "inherit", textDecoration: "none" }}>
@@ -183,32 +296,67 @@ const StudentDashboard = () => {
                             placeholder="Search for food, vendors..."
                             className="input"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={handleSearchChange}
                         />
                     </div>
                 </div>
 
                 {/* Search Results */}
-                {filteredSearchResults.length > 0 && (
-                    <div className="search-results">
+                {(menuResults.length > 0 || vendorResults.length > 0) && (
+                    <div className="search-results" style={{
+
+                        border: "3px solid var(--primary)",
+                        borderRadius: "8px",
+                        padding: "1rem",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                        backgroundColor: "#f9faff",
+                    }}>
                         <h3 style={{ marginBottom: "var(--spacing-4)", fontSize: "1.25rem", fontWeight: 600 }}>
                             Search Results
                         </h3>
-                        <div className="grid grid-3 gap-4">
-                            {filteredSearchResults.map((item) => (
-                                <div key={item.id} className="search-result-card">
-                                    <div className="search-result-title">{item.name}</div>
-                                    <div className="search-result-description">{item.description}</div>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <div className="search-result-price">${item.price}</div>
-                                        <div style={{ fontSize: "0.75rem", color: "var(--muted-foreground)" }}>{item.vendor}</div>
-                                    </div>
+
+                        {/* Menu Items */}
+                        {menuResults.length > 0 && (
+                            <div style={{
+                                marginTop: "var(--spacing-6)",
+                                border: "0.5px solid var(--primary)",
+                                borderRadius: "8px",
+                                padding: '5px'
+                            }}>
+                                <h4>Menu Items</h4>
+                                <div className="grid grid-3 gap-4">
+                                    {menuResults.map(item => (
+                                        <div key={item.menuitemid}
+                                            className="search-result-card">
+                                            <div className="search-result-title">{item.name}</div>
+                                            <div style={{ fontWeight: "bold" }}>${item.price}</div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        )}
+
+                        {/* Vendors */}
+                        {vendorResults.length > 0 && (
+                            <div style={{
+                                marginTop: "var(--spacing-6)",
+                                border: "0.5px solid var(--primary)",
+                                borderRadius: "8px",
+                                padding: '5px'
+                            }}>
+                                <h4>Vendors</h4>
+                                <div className="grid grid-3 gap-4">
+                                    {vendorResults.map(vendor => (
+                                        <div key={vendor.id} className="search-result-card">
+                                            <div className="search-result-title">{vendor.name}</div>
+                                            {/* You can add vendorImage or other details here */}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
-
 
 
                 {/* Welcome Section and Active Orders */}
@@ -223,20 +371,20 @@ const StudentDashboard = () => {
                         </div>
                         <div className="card-content">
                             {activeOrders.length > 0 ? (
-                                activeOrders.slice(0, 5).map((order) => (
-                                    <div key={order.id} className="order-item">
+                                activeOrders.slice(0, 5).map((activeorder) => (
+                                    <div key={activeorder.orderid} className="order-item">
                                         <div className="order-info">
-                                            <h3>{order.vendor}</h3>
-                                            <p>{order.items}</p>
-                                            <p>${order.total}</p>
+                                            <h3>{activeorder.vendorid}</h3>
+                                            <p>Place Order Items</p>
+                                            <p>$Place Total Price</p>
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)" }}>
-                                            <span className={`badge ${order.status === 'ready' ? 'badge-success' : order.status === 'processing' ? 'badge-warning' : 'badge-default'}`}>
-                                                {order.status}
+                                            <span className={`badge ${activeorder.order_status === 'ready' ? 'badge-success' : activeorder.order_status === 'processing' ? 'badge-warning' : 'badge-default'}`}>
+                                                {activeorder.order_status}
                                             </span>
                                             <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-1)", fontSize: "0.75rem", color: "var(--muted-foreground)" }}>
                                                 <Clock size={12} />
-                                                {order.estimatedTime}
+                                                {activeorder.created_at}
                                             </div>
                                         </div>
                                     </div>
@@ -262,7 +410,7 @@ const StudentDashboard = () => {
                                 <div key={vendor.id} className="vendor-item">
                                     <div className="vendor-info">
                                         <h3>{vendor.name}</h3>
-                                        <p>{vendor.items} items • ⭐ {vendor.rating}</p>
+                                        <p>{vendor.items} items • ⭐ {5}</p>
                                     </div>
                                     <div className="vendor-actions">
                                         <span className={`badge ${vendor.available ? 'badge-success' : 'badge-secondary'}`}>
@@ -291,8 +439,8 @@ const StudentDashboard = () => {
                                         <h3>{order.vendor}</h3>
                                         <p>${order.total} • {order.date}</p>
                                     </div>
-                                    <span className={`badge ${order.status === 'collected' ? 'badge-success' : 'badge-secondary'}`}>
-                                        {order.status}
+                                    <span className={`badge ${order.order_status === 'collected' ? 'badge-success' : 'badge-secondary'}`}>
+                                        {order.order_status}
                                     </span>
                                 </div>
                             ))}
