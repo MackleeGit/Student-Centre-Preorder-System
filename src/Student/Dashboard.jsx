@@ -3,16 +3,63 @@ import { Search, ShoppingCart, Bell, Clock } from "lucide-react";
 import "../css/dashboard.css";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { checkAuth, logoutUser } from "../utils/authUtils.js";
+import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
+import { useRealtimeNotifications } from "../components/Notifications/useRealtimeNotifications.jsx";
+import { supabase } from "../utils/supabaseClient.js";
+
+
 
 const StudentDashboard = () => {
 
     const navigate = useNavigate();
+    const [UserData, setUserData] = useState(null);
+    const [loadingUser, setLoadingUser] = useState(true);
+
+
 
     useEffect(() => {
         checkAuth(navigate);
+        checkUserRole("student", navigate);
+
+        const fetchStudent = async () => {
+            const { data: user, error: authError } = await supabase.auth.getUser();
+            if (authError || !user?.user?.email) {
+                console.error("Auth error", authError);
+                navigate("/login");
+                return;
+            }
+
+            const email = user.user.email;
+
+            const { data: student, error: studentError } = await supabase
+                .from("students")
+                .select("student_number, name")
+                .eq("email", email)
+                .maybeSingle();
+
+            if (studentError || !student) {
+                console.error("Student not found", vendorError);
+                navigate("/login");
+                return;
+            }
+
+            setUserData(student);
+            setLoadingUser(false);
+        };
+
+        fetchStudent();
+
     }, []);
+
+
+    // Custom hook using vendor ID
+    const { notifications, loading: notificationsLoading, markAsRead, } = useRealtimeNotifications(UserData?.id);
+
+    if (loadingUser || notificationsLoading) return <p>Loading dashboard...</p>;
+
+    const unreadCount = notifications.filter(notif => !notif.read).length;
+
 
     const handleLogout = async () => {
         const confirmed = await showConfirmToast("Are you sure you wish to log out?");
@@ -43,11 +90,6 @@ const StudentDashboard = () => {
         { id: 4, vendor: "Coffee House", status: "collected", total: 8.50, date: "2 days ago" },
     ];
 
-    const notifications = [
-        { id: 1, message: "Your order from Pizza Palace is ready for pickup!", time: "5 min ago", read: false },
-        { id: 2, message: "Order #1234 has been confirmed", time: "30 min ago", read: true },
-        { id: 3, message: "New menu items available at Burger Barn", time: "2 hours ago", read: true },
-    ];
 
     const searchResults = [
         { id: 1, name: "Margherita Pizza", vendor: "Pizza Palace", price: 12.99, description: "Fresh tomatoes, mozzarella, basil" },
@@ -76,6 +118,27 @@ const StudentDashboard = () => {
                                 onClick={() => setShowNotifications(!showNotifications)}
                             >
                                 <Bell size={16} />
+
+                                {unreadCount > 0 && (
+                                    <span style={{
+                                        position: 'absolute',
+                                        top: '-2px',
+                                        right: '-2px',
+                                        background: '#ef4444',
+                                        color: 'white',
+                                        borderRadius: '50%',
+                                        width: '18px',
+                                        height: '18px',
+                                        fontSize: '0.75rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
+
                             </button>
                             {showNotifications && (
                                 <div className="notification-menu">
@@ -99,10 +162,10 @@ const StudentDashboard = () => {
                         <button
                             className="btn btn-outline"
                             onClick={handleLogout}
-                            >
+                        >
                             Log Out
                         </button>
-                        
+
                         <button className="btn btn-outline">
                             <a href="/student/profile" style={{ color: "inherit", textDecoration: "none" }}>Profile</a>
                         </button>
@@ -124,6 +187,29 @@ const StudentDashboard = () => {
                         />
                     </div>
                 </div>
+
+                {/* Search Results */}
+                {filteredSearchResults.length > 0 && (
+                    <div className="search-results">
+                        <h3 style={{ marginBottom: "var(--spacing-4)", fontSize: "1.25rem", fontWeight: 600 }}>
+                            Search Results
+                        </h3>
+                        <div className="grid grid-3 gap-4">
+                            {filteredSearchResults.map((item) => (
+                                <div key={item.id} className="search-result-card">
+                                    <div className="search-result-title">{item.name}</div>
+                                    <div className="search-result-description">{item.description}</div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <div className="search-result-price">${item.price}</div>
+                                        <div style={{ fontSize: "0.75rem", color: "var(--muted-foreground)" }}>{item.vendor}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+
 
                 {/* Welcome Section and Active Orders */}
                 <div className="welcome-section">
@@ -164,26 +250,6 @@ const StudentDashboard = () => {
                     </div>
                 </div>
 
-                {/* Search Results */}
-                {filteredSearchResults.length > 0 && (
-                    <div className="search-results">
-                        <h3 style={{ marginBottom: "var(--spacing-4)", fontSize: "1.25rem", fontWeight: 600 }}>
-                            Search Results
-                        </h3>
-                        <div className="grid grid-3 gap-4">
-                            {filteredSearchResults.map((item) => (
-                                <div key={item.id} className="search-result-card">
-                                    <div className="search-result-title">{item.name}</div>
-                                    <div className="search-result-description">{item.description}</div>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <div className="search-result-price">${item.price}</div>
-                                        <div style={{ fontSize: "0.75rem", color: "var(--muted-foreground)" }}>{item.vendor}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
 
                 <div className="grid grid-2 gap-4">
                     {/* Available Vendors */}

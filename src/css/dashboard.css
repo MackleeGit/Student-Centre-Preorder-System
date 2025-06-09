@@ -316,6 +316,7 @@ body {
   background: var(--muted);
 }
 
+
 .notification-item:last-child {
   border-bottom: none;
 }
@@ -325,6 +326,12 @@ body {
   font-size: 0.875rem;
   margin-bottom: var(--spacing-1);
 }
+
+
+.notification-content {
+  flex: 1;
+}
+
 
 .notification-time {
   font-size: 0.75rem;
@@ -423,13 +430,27 @@ body {
 
 /* Responsive utilities */
 @media (max-width: 768px) {
+   .header .container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .header-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .header .flex {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
   .container {
     padding: 0 var(--spacing-3);
   }
   
-  .header-title {
-    font-size: 1.25rem;
-  }
+ 
   
   .notification-menu {
     width: 280px;

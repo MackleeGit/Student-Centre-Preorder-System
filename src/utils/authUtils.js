@@ -70,3 +70,45 @@ export const logoutUser = async (navigate) => {
   await supabase.auth.signOut();
   navigate("/login");
 };
+
+
+export const checkUserRole = async (expectedRole, navigate) => {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !authData?.user?.email) {
+        await showErrorToast("You are not logged in.");
+        await logoutUser(navigate);
+        return;
+    }
+
+    const email = authData.user.email;
+    let tableName = "";
+    let matchFound = false;
+
+    switch (expectedRole.toLowerCase()) {
+        case "student":
+            tableName = "students";
+            break;
+        case "vendor":
+            tableName = "vendors";
+            break;
+        case "admin":
+            tableName = "admins";
+            break;
+        default:
+            await showErrorToast("Invalid role specified.");
+            await logoutUser(navigate);
+            return;
+    }
+
+    const { data: userRecords, error: fetchError } = await supabase
+        .from(tableName)
+        .select("email")
+        .eq("email", email)
+        .maybeSingle();
+
+    if (!userRecords || fetchError) {
+        await showErrorToast("You are not authorized to access that page. Kindly log in again.");
+        await logoutUser(navigate);
+    }
+};

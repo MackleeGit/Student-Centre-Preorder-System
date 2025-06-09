@@ -3,17 +3,78 @@ import { Bell, Package, DollarSign, TrendingUp, Clock, User } from "lucide-react
 import "../css/dashboard.css";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { checkAuth, logoutUser } from "../utils/authUtils.js";
+import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
-
+import { useRealtimeNotifications } from "../components/Notifications/useRealtimeNotifications.jsx";
+import { supabase } from "../utils/supabaseClient.js";
 
 const VendorDashboard = () => {
 
   const navigate = useNavigate();
+  const [UserData, setUserData] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+
 
   useEffect(() => {
     checkAuth(navigate);
+    checkUserRole("vendor", navigate);
+
+    const fetchVendor = async () => {
+      const { data: user, error: authError } = await supabase.auth.getUser();
+      if (authError || !user?.user?.email) {
+        console.error("Auth error", authError);
+        navigate("/login");
+        return;
+      }
+
+      const email = user.user.email;
+
+      const { data: vendor, error: vendorError } = await supabase
+        .from("vendors")
+        .select("id, name")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (vendorError || !vendor) {
+        console.error("Vendor not found", vendorError);
+        navigate("/login");
+        return;
+      }
+
+      setUserData(vendor);
+      setLoadingUser(false);
+    };
+
+    fetchVendor();
+
+
+
   }, []);
+
+
+
+  // Custom hook using vendor ID //Added OR NULL (Always call it)
+  const { notifications, loading: notificationsLoading, markAsRead } =
+    useRealtimeNotifications(UserData?.id || null);
+
+  const formatNotificationTime = (timestamp) => {
+    const now = new Date();
+    const notifTime = new Date(timestamp);
+    const diffMs = now - notifTime;
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+    return `${Math.floor(diffMins / 1440)}d ago`;
+  };
+
+
+  if (loadingUser || notificationsLoading) return <p>Loading dashboard...</p>;
+
+  const unreadCount = notifications.filter(notif => !notif.read).length;
 
   const handleLogout = async () => {
     const confirmed = await showConfirmToast("Are you sure you wish to log out?");
@@ -22,7 +83,12 @@ const VendorDashboard = () => {
     }
   };
 
-  const [showNotifications, setShowNotifications] = useState(false);
+  const handleNotificationClick = async (notifId, isRead) => {
+    if (!isRead) {
+      await markAsRead(notifId);
+    }
+  };
+
 
   // Mock data
   const vendorName = "Pizza Palace";
@@ -92,11 +158,6 @@ const VendorDashboard = () => {
     }
   ];
 
-  const notifications = [
-    { id: 1, message: "New order #1234 received from John Doe", time: "2 min ago", read: false },
-    { id: 2, message: "Order #1233 has been collected", time: "15 min ago", read: true },
-    { id: 3, message: "Daily sales report is available", time: "1 hour ago", read: true },
-  ];
 
   const updateOrderStatus = (orderId, newStatus) => {
     console.log(`Updating order ${orderId} to ${newStatus}`);
@@ -127,6 +188,30 @@ const VendorDashboard = () => {
                 onClick={() => setShowNotifications(!showNotifications)}
               >
                 <Bell size={16} />
+
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-2px',
+                    right: '-2px',
+                    background: '#ef4444',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '18px',
+                    height: '18px',
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold'
+                  }}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+
+
+
+
               </button>
 
               {showNotifications && (
@@ -135,9 +220,23 @@ const VendorDashboard = () => {
                     <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>Notifications</div>
                   </div>
                   {notifications.map((notif) => (
-                    <div key={notif.id} className="notification-item">
+                    <div key={notif.notifid} className="notification-item">
                       <div className="notification-title">{notif.message}</div>
-                      <div className="notification-time">{notif.time}</div>
+                      <div className="notification-time">{formatNotificationTime(notif.timestamp)}</div>
+
+                      {!notif.read && (
+
+                        <button
+                          onClick={() => markAsRead(notif.notifid)}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow" >
+                          Mark as Read
+                        </button>
+
+
+                      )}
+
+
+
                     </div>
                   ))}
                 </div>
