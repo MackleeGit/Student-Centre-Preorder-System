@@ -208,7 +208,8 @@ const StudentDashboard = () => {
             {/* Header */}
             <header className="header">
                 <div className="container flex items-center justify-between">
-                    <h1 className="header-title">Order & Go Campus</h1>
+                    <h1 className="header-title">STC Preorder System
+</h1>
                     <div className="flex items-center gap-4">
                         <div className="notification-dropdown">
                             <button

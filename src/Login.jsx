@@ -8,7 +8,7 @@ import { showSuccessToast, showErrorToast, showConfirmToast } from "./components
 const roles = ["student", "vendor"];
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  const [unameemail, setUnameEmail] = useState("");
   const [password, setPassword] = useState("");
   const [activeRole, setActiveRole] = useState("student");
   const navigate = useNavigate(); // SPA-safe navigation
@@ -17,7 +17,7 @@ const Login = () => {
 
   const handleLogin = async (role) => {
     try {
-      await loginUser({ email, password, role, navigate });
+      await loginUser({ unameemail, password, role, navigate });
     } catch (error) {
       showErrorToast(error.message, "Login Failed");
     }
@@ -56,8 +56,8 @@ const Login = () => {
                   <input
                     id="email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={unameemail}
+                    onChange={(e) => setUnameEmail(e.target.value)}
                     placeholder={
                       role === "student"
                         ? "Enter student ID or email"
