@@ -5,6 +5,7 @@ import Register from "./Register";
 import StudentDashboard from "./Student/Dashboard";
 import VendorDashboard from "./Vendor/Dashboard";
 import './css/global.css';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
