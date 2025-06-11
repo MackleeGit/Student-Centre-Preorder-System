@@ -32,7 +32,7 @@ function App() {
          <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/student/dashboard" element={<StudentDashboard />} />
         <Route path="/student/viewvendor/:vendorid" element={<ViewVendor />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard/>} />
+        <Route path="/admin/dashboard" element={<AdminDashboard/>} />
 
         <Route path="/vendor/dashboard" element={<VendorDashboard />} />
         <Route path="/admin" element={<Index />} />
