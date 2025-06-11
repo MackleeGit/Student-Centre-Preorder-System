@@ -11,6 +11,12 @@ const Index = () => {
       {/* Hero Section */}
       <section className="hero">
         <div className="container text-center">
+           {/* Logo placeholder*/}
+          <img 
+            src="/placeholder.svg" 
+            alt="STC Logo" 
+            className="logo"
+          />
           <h1 className="title">The STC Preorder System</h1>
           <p className="subtitle">
             Skip the queues, order ahead, and enjoy your campus meals without the wait.

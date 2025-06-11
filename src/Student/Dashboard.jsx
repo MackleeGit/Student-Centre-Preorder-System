@@ -7,6 +7,8 @@ import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
 import { useRealtimeNotifications } from "../components/Notifications/useRealtimeNotifications.jsx";
 import { supabase } from "../utils/supabaseClient.js";
+import { Link } from "react-router-dom";
+import RatingDisplay from "../components/rating/RatingDisplay.jsx";
 
 
 
@@ -61,7 +63,7 @@ const StudentDashboard = () => {
         };
         fetchStudent();
 
-    
+
 
         const fetchVendors = async () => {
 
@@ -92,42 +94,42 @@ const StudentDashboard = () => {
 
 
     useEffect(() => {
-    if (!UserData?.student_number) return;
+        if (!UserData?.student_number) return;
 
-    const fetchActiveOrders = async () => {
-        const { data, error } = await supabase
-            .from("orders")
-            .select("orderid, vendorid, order_status, created_at, time_accepted")
-            .eq("student_number", UserData.student_number)
-            .in("order_status", ["pending", "processing", "ready"])
-            .order("created_at", { ascending: false });
+        const fetchActiveOrders = async () => {
+            const { data, error } = await supabase
+                .from("orders")
+                .select("orderid, vendorid, order_status, created_at, time_accepted")
+                .eq("student_number", UserData.student_number)
+                .in("order_status", ["pending", "processing", "ready"])
+                .order("created_at", { ascending: false });
 
-        if (!error) {
-            setActiveOrders(data);
-        } else {
-            console.error("Error fetching active orders:", error);
-        }
-    };
-    fetchActiveOrders();
+            if (!error) {
+                setActiveOrders(data);
+            } else {
+                console.error("Error fetching active orders:", error);
+            }
+        };
+        fetchActiveOrders();
 
-    const fetchRecentOrders = async () => {
-        const { data, error } = await supabase
-            .from("orders")
-            .select("orderid, vendorid, order_status,created_at")
-            .eq("student_number", UserData.student_number)
-            .eq("order_status", "collected")
-            .order("created_at", { ascending: false })
-            .limit(5);
+        const fetchRecentOrders = async () => {
+            const { data, error } = await supabase
+                .from("orders")
+                .select("orderid, vendorid, order_status,created_at")
+                .eq("student_number", UserData.student_number)
+                .eq("order_status", "collected")
+                .order("created_at", { ascending: false })
+                .limit(5);
 
-        if (!error) {
-            setRecentOrders(data);
-        } else {
-            console.error("Error fetching recent orders:", error);
-        }
-    };
-    fetchRecentOrders();
+            if (!error) {
+                setRecentOrders(data);
+            } else {
+                console.error("Error fetching recent orders:", error);
+            }
+        };
+        fetchRecentOrders();
 
-}, [UserData]);
+    }, [UserData]);
     // Custom hook using vendor ID
     const { notifications, loading: notificationsLoading, markAsRead, } = useRealtimeNotifications(UserData?.id);
 
@@ -182,34 +184,15 @@ const StudentDashboard = () => {
 
 
 
-    // Mock data
-    const studentName = `${UserData?.fname} ${UserData?.lname}`;
 
-
-
-
-    const searchResults = [
-        { id: 1, name: "Margherita Pizza", vendor: "Pizza Palace", price: 12.99, description: "Fresh tomatoes, mozzarella, basil" },
-        { id: 2, name: "Classic Burger", vendor: "Burger Barn", price: 10.50, description: "Beef patty, lettuce, tomato, onion" },
-    ];
-
-    const filteredSearchResults = searchQuery ? searchResults.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.vendor.toLowerCase().includes(searchQuery.toLowerCase())
-    ) : [];
-
-
-
-
-
+    const studentName = `${UserData?.fname} ${UserData?.lname}`
 
     return (
         <div style={{ minHeight: "100vh", background: "var(--background)" }}>
             {/* Header */}
             <header className="header">
                 <div className="container flex items-center justify-between">
-                    <h1 className="header-title">STC Preorder System
-</h1>
+                    <h1 className="header-title">STC Preorder System</h1>
                     <div className="flex items-center gap-4">
                         <div className="notification-dropdown">
                             <button
@@ -348,10 +331,14 @@ const StudentDashboard = () => {
                                 <h4>Vendors</h4>
                                 <div className="grid grid-3 gap-4">
                                     {vendorResults.map(vendor => (
-                                        <div key={vendor.id} className="search-result-card">
+                                        <Link
+                                            key={vendor.id}
+                                            to={`/student/viewvendor/${vendor.id}`}
+                                            className="search-result-card"
+                                            style={{ textDecoration: "none", color: "inherit" }}
+                                        >
                                             <div className="search-result-title">{vendor.name}</div>
-                                            {/* You can add vendorImage or other details here */}
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             </div>
@@ -414,14 +401,16 @@ const StudentDashboard = () => {
                                         <p>{vendor.items} items • ⭐ {5}</p>
                                     </div>
                                     <div className="vendor-actions">
-                                        <span className={`badge ${vendor.available ? 'badge-success' : 'badge-secondary'}`}>
-                                            {vendor.available ? "Open" : "Closed"}
+                                        <span className={`badge ${vendor.availability ? 'badge-success' : 'badge-secondary'}`}>
+                                            {vendor.availability ? "Open" : "Closed"}
                                         </span>
-                                        <button className={`btn btn-sm ${vendor.available ? 'btn-primary' : 'btn-secondary'}`} disabled={!vendor.available}>
-                                            <a href={`/student/menu/${vendor.id}`} style={{ color: "inherit", textDecoration: "none" }}>
-                                                View Menu
-                                            </a>
-                                        </button>
+                                        <Link
+                                            to={`/student/viewvendor/${vendor.id}`}
+                                            className={`btn btn-sm ${vendor.availability ? 'btn-primary' : 'btn-secondary'}`}
+                                            style={{ textDecoration: "none" }}
+                                        >
+                                            View Vendor
+                                        </Link>
                                     </div>
                                 </div>
                             ))}
@@ -454,7 +443,7 @@ const StudentDashboard = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

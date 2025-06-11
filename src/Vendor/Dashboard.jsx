@@ -71,11 +71,6 @@ const VendorDashboard = () => {
     }
   };
 
-  const handleNotificationClick = async (notifId, isRead) => {
-    if (!isRead) {
-      await markAsRead(notifId);
-    }
-  };
 
 
   // Mock data

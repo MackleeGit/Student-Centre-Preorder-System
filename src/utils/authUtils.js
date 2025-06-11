@@ -54,60 +54,79 @@ export const registerUser = async ({ role, email, password, extraFields }) => {
 
 // Login user
 
-
 export const loginUser = async ({ unameemail, password, role, navigate }) => {
   try {
-    // First attempt: try logging in directly (email for vendor, email or student_number for student)
-    const { error: initialError } = await supabase.auth.signInWithPassword({
-      email: unameemail,
+    let validEmail = null;
+
+    // ---  Pre-check based on role ---
+    if (role === "student") {
+      if (unameemail.includes("@")) {
+        // Search by email
+        const { data: student, error } = await supabase
+          .from("students")
+          .select("email")
+          .eq("email", unameemail)
+          .single();
+
+        if (error || !student) throw new Error("No student with that email");
+        validEmail = student.email;
+
+      } else {
+        // Search by student number
+        const { data: student, error } = await supabase
+          .from("students")
+          .select("email")
+          .eq("student_number", unameemail)
+          .single();
+
+        if (error || !student) throw new Error("Student number not found");
+        validEmail = student.email;
+      }
+    } 
+    
+    else if (role === "vendor") {
+      const { data: vendor, error } = await supabase
+        .from("vendors")
+        .select("email")
+        .eq("email", unameemail)
+        .single();
+
+      if (error || !vendor) throw new Error("No vendor with that email");
+      validEmail = vendor.email;
+    }
+
+    else if (role === "admin") {
+      const { data: admin, error } = await supabase
+        .from("admins")
+        .select("email")
+        .eq("email", unameemail)
+        .single();
+
+      if (error || !admin) throw new Error("No admin with that email");
+      validEmail = admin.email;
+    }
+
+    // --- Sign in using validated email ---
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: validEmail,
       password,
     });
 
-    if (!initialError) {
-      // Success → Navigate based on role
-      if (role === "student") {
-        navigate("/student/dashboard");
-      } else if (role === "vendor") {
-        navigate("/vendor/dashboard");
-      }
-      return;
-    }
+    if (signInError) throw signInError;
 
-    // If student and initial login failed, try fallback: unameemail might be a student number
-    if (role === "student" && !unameemail.includes("@")) {
-      const { data: student, error: studentFetchError } = await supabase
-        .from("students")
-        .select("email")
-        .eq("student_number", unameemail)
-        .single();
-
-      if (!student || studentFetchError) {
-        throw new Error("Student number not found");
-      }
-
-      const { error: retryError } = await supabase.auth.signInWithPassword({
-        email: student.email,
-        password,
-      });
-
-      if (retryError) {
-        throw initialError;
-      }
-
+    // ---  Route to dashboard based on role ---
+    if (role === "student") {
       navigate("/student/dashboard");
-      return;
+    } else if (role === "vendor") {
+      navigate("/vendor/dashboard");
+    } else {
+      navigate("/admin/dashboard");
     }
-
-    // If vendor login failed or student fallback didn't apply
-    throw initialError;
 
   } catch (err) {
     throw err;
   }
 };
-
-
-
 // Logout
 export const logoutUser = async (navigate) => {
   await supabase.auth.signOut();
