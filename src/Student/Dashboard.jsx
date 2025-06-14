@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
-import { useRealtimeNotifications } from "../components/Notifications/useRealtimeNotifications.jsx";
+import { useRealtimeNotifications } from "../components/hooks/useRealtimeNotifications.jsx";
 import { supabase } from "../utils/supabaseClient.js";
 import { Link } from "react-router-dom";
 import RatingDisplay from "../components/rating/RatingDisplay.jsx";

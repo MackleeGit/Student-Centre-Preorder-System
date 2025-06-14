@@ -1,19 +1,59 @@
-import { useState } from "react";
-import { Bell, Package, DollarSign, TrendingUp, Clock, User } from "lucide-react";
+import React, { useState, useEffect, useRef } from 'react';
+import { Clock, CheckCircle, XCircle, Bell, Search, Package, DollarSign, TrendingUp, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import "../css/dashboard.css";
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
-import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
-import { useRealtimeNotifications} from "../components/Notifications/useRealtimeNotifications.jsx";
+import { showConfirmToast, showInfoToast, showSuccessToast } from "../components/Toast/toastUtils.jsx";
+import { useRealtimeNotifications } from "../components/hooks/useRealtimeNotifications.jsx";
+import { useVendorOrders } from "../components/hooks/useVendorOrders.js";
 import { supabase } from "../utils/supabaseClient.js";
 
 const VendorDashboard = () => {
-
   const navigate = useNavigate();
   const [UserData, setUserData] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [timeslotMap, setTimeslotMap] = useState(null);
+
+
+  // New modal state
+  const [showIncomingModal, setShowIncomingModal] = useState(false);
+  const [showApprovedModal, setShowApprovedModal] = useState(false);
+
+
+
+  useEffect(() => {
+    if (!UserData?.vendorid) return;
+
+    const fetchTimeslots = async () => {
+      const { data, error } = await supabase
+        .from("time_slot")
+        .select("timeslotid, timeslottime");
+
+      if (error) {
+        console.error("❌ Failed to fetch time slots:", error);
+        return;
+      }
+
+      const map = {};
+      data?.forEach((slot) => {
+        let timeString = slot.timeslottime;
+        if (timeString && timeString.match(/^\d{2}:\d{2}:\d{2}$/)) {
+          const [h, m] = timeString.split(":");
+          const hourNum = parseInt(h, 10);
+          const ampm = hourNum >= 12 ? "PM" : "AM";
+          const hour12 = ((hourNum + 11) % 12 + 1);
+          map[slot.timeslotid] = `${hour12.toString().padStart(2, '0')}:${m} ${ampm}`;
+        } else {
+          map[slot.timeslotid] = timeString;
+        }
+      });
+
+      setTimeslotMap(map);
+    };
+
+    fetchTimeslots();
+  }, [UserData?.vendorid]);
 
 
 
@@ -30,10 +70,9 @@ const VendorDashboard = () => {
       }
 
       const email = user.user.email;
-
       const { data: vendor, error: vendorError } = await supabase
         .from("vendors")
-        .select("id, name")
+        .select("vendorid, name")
         .eq("email", email)
         .maybeSingle();
 
@@ -45,22 +84,103 @@ const VendorDashboard = () => {
 
       setUserData(vendor);
       setLoadingUser(false);
+
     };
 
     fetchVendor();
-
-
-
   }, []);
 
 
 
-  // Custom hook using vendor ID //Added OR NULL (Always call it)
-  const { notifications, loading: notificationsLoading, markAsRead } =
-    useRealtimeNotifications(UserData?.id || null);
+  const {
+    notifications,
+    initialNotificationLoading,
+    isRefreshingNotifications,
+    markAsRead,
+    formatNotificationTime,
+    refetchNotifications,
+    fetchNotifications
+  } = useRealtimeNotifications(UserData?.vendorid || null);
 
 
-  if (loadingUser || notificationsLoading) return <p>Loading dashboard...</p>;
+  const {
+    incomingOrders,
+    setIncomingOrders,
+    approvedOrders,
+    setApprovedOrders,
+    initialOrderLoading,
+    isRefreshingOrders,
+    refetchOrders,
+    fetchOrders
+  } = useVendorOrders(UserData?.vendorid);
+
+
+
+  useEffect(() => {
+    if (!UserData?.vendorid) return;
+    fetchNotifications();
+    fetchOrders();
+
+    const poll = () => {
+      console.log('⏰ Polling Supabase for updates...');
+      refetchOrders();
+      refetchNotifications();
+    };
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        poll();
+      }
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [UserData?.vendorid]);
+
+
+
+
+  const lastNotifId = useRef(null);
+  const lastIncomingOrderId = useRef(null);
+  const lastApprovedOrderId = useRef(null);
+
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latest = notifications[0].notifid;
+      if (lastNotifId.current && latest !== lastNotifId.current) {
+        showSuccessToast("🔔 New Notification", "");
+      }
+      lastNotifId.current = latest;
+    }
+  }, [notifications]);
+
+  useEffect(() => {
+    if (incomingOrders.length > 0) {
+      const latest = incomingOrders[0].orderid;
+      if (lastIncomingOrderId.current && latest !== lastIncomingOrderId.current) {
+        showSuccessToast("New Order Incoming", "");
+      }
+      lastIncomingOrderId.current = latest;
+    }
+  }, [incomingOrders]);
+
+
+  useEffect(() => {
+    if (approvedOrders.length > 0) {
+      const latest = approvedOrders[0].orderid;
+      if (lastApprovedOrderId.current && latest !== lastApprovedOrderId.current) {
+        showSuccessToast("Order Approved", "");
+      }
+      lastApprovedOrderId.current = latest;
+    }
+  }, [approvedOrders]);
+
+
+
+
+
+  if (loadingUser || initialNotificationLoading || initialOrderLoading) {
+    return <p>Loading dashboard...</p>;
+  }
 
   const unreadCount = notifications.filter(notif => !notif.read).length;
 
@@ -72,291 +192,548 @@ const VendorDashboard = () => {
   };
 
 
+  const updateOrderStatus = async (orderId, newStatus, extraFields = {}) => {
+    const { error } = await supabase
+      .from("orders")
+      .update({ order_status: newStatus, ...extraFields })
+      .eq("orderid", orderId);
 
-  // Mock data
-  const vendorName = "Pizza Palace";
-  const vendorRating = 4.5;
-
-  const stats = {
-    todayOrders: 23,
-    todayRevenue: 456.78,
-    activeOrders: 5,
-    avgRating: 4.5
-  };
-
-  const processingOrders = [
-    {
-      id: 1,
-      student: "John Doe",
-      items: ["Margherita Pizza x2", "Garlic Bread x1"],
-      total: 25.99,
-      status: "pending",
-      orderTime: "2 min ago",
-      pickupTime: "15 min"
-    },
-    {
-      id: 2,
-      student: "Jane Smith",
-      items: ["Pepperoni Pizza x1", "Coke x1"],
-      total: 18.50,
-      status: "processing",
-      orderTime: "5 min ago",
-      pickupTime: "10 min"
-    },
-    {
-      id: 3,
-      student: "Mike Johnson",
-      items: ["Veggie Pizza x1", "Water x1"],
-      total: 22.99,
-      status: "ready",
-      orderTime: "8 min ago",
-      pickupTime: "Ready!"
-    },
-    {
-      id: 4,
-      student: "Sarah Wilson",
-      items: ["Hawaiian Pizza x1"],
-      total: 16.99,
-      status: "processing",
-      orderTime: "12 min ago",
-      pickupTime: "8 min"
-    },
-    {
-      id: 5,
-      student: "Tom Brown",
-      items: ["Meat Loaf x1", "Fries x2"],
-      total: 24.50,
-      status: "pending",
-      orderTime: "15 min ago",
-      pickupTime: "20 min"
-    },
-    {
-      id: 6,
-      student: "Lisa Davis",
-      items: ["Margherita Pizza x1", "Salad x1"],
-      total: 19.99,
-      status: "ready",
-      orderTime: "18 min ago",
-      pickupTime: "Ready!"
+    if (error) {
+      console.error(`❌ Failed to update order ${orderId} to "${newStatus}":`, error);
+      return false;
     }
-  ];
 
-
-  const updateOrderStatus = (orderId, newStatus) => {
-    console.log(`Updating order ${orderId} to ${newStatus}`);
-    // TODO: Implement status update
+    return true;
   };
 
-  const handleOrderClick = (orderId) => {
-    console.log(`Viewing order ${orderId}`);
-    // TODO: Navigate to order details
+
+  const handleAcceptOrder = async (orderId) => {
+    const order = incomingOrders.find(o => o.orderid === orderId);
+    if (!order) return;
+
+    const success = await updateOrderStatus(orderId, "processing", {
+      time_accepted: new Date().toISOString()
+    });
+
+    if (success) {
+      const updatedOrder = { ...order, order_status: "processing", time_accepted: new Date().toISOString() };
+      setIncomingOrders(prev => prev.filter(o => o.orderid !== orderId));
+      setApprovedOrders(prev => [updatedOrder, ...prev]);
+    }
   };
+
+  const handleRejectOrder = async (orderId) => {
+    const success = await updateOrderStatus(orderId, "rejected");
+    if (success) {
+      setIncomingOrders(prev => prev.filter(o => o.orderid !== orderId));
+    }
+  };
+
+  const handleMarkReady = async (orderId) => {
+    const success = await updateOrderStatus(orderId, "ready");
+    if (success) {
+      setApprovedOrders(prev =>
+        prev.map(order =>
+          order.orderid === orderId ? { ...order, order_status: "ready" } : order
+        )
+      );
+    }
+  };
+
+  const handleMarkCollected = async (orderId) => {
+    const success = await updateOrderStatus(orderId, "collected", {
+      time_collected: new Date().toISOString()
+    });
+
+    if (success) {
+      setApprovedOrders(prev => prev.filter(o => o.orderid !== orderId));
+    }
+  };
+
+
+
+  const formatTime = (timestamp) => {
+    return new Date(timestamp).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+
+  const getTimeslotTime = (timeslotid) => {
+    return timeslotMap[timeslotid] || "Unknown";
+  };
+
+  const getStatusBadge = (order_status) => {
+    switch (order_status) {
+      case 'pending':
+        return <span className="badge badge-warning">Pending</span>;
+      case 'accepted':
+      case 'preparing':
+        return <span className="badge badge-secondary">Preparing</span>;
+      case 'ready':
+        return <span className="badge badge-success">Ready</span>;
+      default:
+        return <span className="badge badge-default">{order_status}</span>;
+    }
+  };
+
+
+
+
+  // Render for modal order details (shared by both modals)
+  const renderOrderDetails = (order, isIncoming) => (
+    <div key={order.orderid} className="border rounded-lg p-4 mb-4 bg-white shadow-sm">
+      <div className="flex flex-col gap-1 md:flex-row md:justify-between md:items-center">
+        <div className="font-semibold">Order #{order.orderid}</div>
+        {getStatusBadge(order.order_status)}
+      </div>
+      <div className="mt-2 text-sm text-gray-600 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        <span>Student: <span className="font-medium">{order.student_number}</span></span>
+        <span>Created: <span className="font-mono">{formatDate(order.created_at)} {formatTime(order.created_at)}</span></span>
+        <span>Time To Be Received: <span className="font-mono">{order.timeslotid ? (timeslotMap[order.timeslotid] || order.timeslotid) : '-'}</span></span>
+      </div>
+      <div className="mt-2 text-sm text-gray-800">
+        <span className="font-semibold">Items:</span> {(order.items || []).join(', ')}
+      </div>
+      <div className="text-md font-bold mt-2">${(order.total_amount || 0).toFixed(2)}</div>
+      <div className="mt-3 flex gap-2 flex-wrap">
+        {isIncoming ? (
+          <>
+            <Button variant="success" size="sm" onClick={() => handleAcceptOrder(order.orderid)}>
+              <CheckCircle size={16} className="mr-2" /> Accept
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => handleRejectOrder(order.orderid)}>
+              <XCircle size={16} className="mr-2" /> Reject
+            </Button>
+          </>
+        ) : (
+          <>
+            {order.order_status === 'processing' && (
+              <Button variant="success" size="sm" onClick={() => handleMarkReady(order.orderid)}>
+                Mark Ready
+              </Button>
+            )}
+            {order.order_status === 'ready' && (
+              <Button variant="secondary" size="sm" onClick={() => handleMarkCollected(order.orderid)}>
+                Mark Collected
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+
+
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--background)" }}>
+    <div style={{ minHeight: '100vh', background: 'var(--muted)' }}>
       {/* Header */}
       <header className="header">
-        <div className="container flex items-center justify-between">
-          <div>
-            <h1 className="header-title">{vendorName}</h1>
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)", marginTop: "var(--spacing-1)" }}>
-              <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>⭐ {vendorRating}</span>
-              <span style={{ color: "var(--muted-foreground)", fontSize: "0.875rem" }}>Average Rating</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="notification-dropdown">
-              <button
-                className="btn btn-outline btn-icon"
-                onClick={() => setShowNotifications(!showNotifications)}
-              >
-                <Bell size={16} />
+        <div className="container">
+          <div className="flex items-center justify-between">
+            <h1 className="header-title">Vendor Dashboard</h1>
+            <div className="flex items-center gap-4">
+              <div className="input-with-icon">
+                <Search className="input-icon" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search orders..."
+                  className="input"
+                  style={{ paddingLeft: '2.5rem' }}
+                />
+              </div>
+              <div className="notification-dropdown">
+                <button
+                  className="btn btn-outline btn-icon"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                >
+                  <Bell size={16} />
 
-                {unreadCount > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    top: '-2px',
-                    right: '-2px',
-                    background: '#ef4444',
-                    color: 'white',
-                    borderRadius: '50%',
-                    width: '18px',
-                    height: '18px',
-                    fontSize: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold'
-                  }}>
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-2px',
+                      right: '-2px',
+                      background: '#ef4444',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      fontSize: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 'bold'
+                    }}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+
+                </button>
+                {showNotifications && (
+                  <div className="notification-menu">
+                    <div style={{ padding: "var(--spacing-3)", borderBottom: "1px solid var(--border)" }}>
+                      <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>Notifications</div>
+                    </div>
+                    {notifications.map((notif) => (
+                      <div key={notif.notifid} className="notification-item">
+                        <div className="notification-title">{notif.message}</div>
+                        <div className="notification-time">{formatNotificationTime(notif.timestamp)}</div>
+
+                        {!notif.read && (
+
+                          <button
+                            onClick={() => markAsRead(notif.notifid)}
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow" >
+                            Mark as Read
+                          </button>
+
+
+                        )}
+
+
+
+                      </div>
+                    ))}
+                  </div>
                 )}
 
-
-
-
-              </button>
-
-              {showNotifications && (
-                <div className="notification-menu">
-                  <div style={{ padding: "var(--spacing-3)", borderBottom: "1px solid var(--border)" }}>
-                    <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>Notifications</div>
-                  </div>
-                  {notifications.map((notif) => (
-                    <div key={notif.notifid} className="notification-item">
-                      <div className="notification-title">{notif.message}</div>
-                      <div className="notification-time">{formatNotificationTime(notif.timestamp)}</div>
-
-                      {!notif.read && (
-
-                        <button
-                          onClick={() => markAsRead(notif.notifid)}
-                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow" >
-                          Mark as Read
-                        </button>
-
-
-                      )}
-
-
-
-                    </div>
-                  ))}
-                </div>
-              )}
-
+              </div>
             </div>
-
-            <button
-              className="btn btn-outline"
-              onClick={handleLogout}
-            >
-              Log Out
-            </button>
-            <button className="btn btn-outline">
-              <a href="/vendor/profile" style={{ color: "inherit", textDecoration: "none" }}>Profile</a>
-            </button>
           </div>
         </div>
       </header>
 
-      <div className="container" style={{ padding: "var(--spacing-6) var(--spacing-4)" }}>
-        {/* Stats Cards */}
-        <div className="grid grid-4 gap-4" style={{ marginBottom: "var(--spacing-6)" }}>
-          <div className="card stats-card">
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)", marginBottom: "var(--spacing-2)" }}>
-              <Package size={16} style={{ color: "var(--primary)" }} />
-              <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>Today's Orders</span>
-            </div>
-            <p style={{ fontSize: "1.5rem", fontWeight: 700 }}>{stats.todayOrders}</p>
-          </div>
-          <div className="card stats-card">
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)", marginBottom: "var(--spacing-2)" }}>
-              <DollarSign size={16} style={{ color: "var(--primary)" }} />
-              <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>Today's Revenue</span>
-            </div>
-            <p style={{ fontSize: "1.5rem", fontWeight: 700 }}>${stats.todayRevenue}</p>
-          </div>
-          <div className="card stats-card">
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)", marginBottom: "var(--spacing-2)" }}>
-              <Bell size={16} style={{ color: "var(--primary)" }} />
-              <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>Active Orders</span>
-            </div>
-            <p style={{ fontSize: "1.5rem", fontWeight: 700 }}>{stats.activeOrders}</p>
-          </div>
-          <div className="card stats-card">
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)", marginBottom: "var(--spacing-2)" }}>
-              <TrendingUp size={16} style={{ color: "var(--primary)" }} />
-              <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>Avg Rating</span>
-            </div>
-            <p style={{ fontSize: "1.5rem", fontWeight: 700 }}>⭐ {stats.avgRating}</p>
+      <div className="container" style={{ padding: 'var(--spacing-6) var(--spacing-4)' }}>
+        {/* Welcome Section */}
+        <div className="welcome-section">
+          <div className="welcome-text">
+            <h2 className="welcome-title">Welcome back, {UserData.name}. For test purposes, your id is {UserData.vendorid}!</h2>
+            <p style={{ color: 'var(--muted-foreground)' }}>
+              Manage your orders and keep track of your business.
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-2 gap-4">
-          {/* Order Queue */}
+        {/* Order Queues */}
+        <div className="grid grid-2 gap-4" style={{ marginBottom: 'var(--spacing-8)' }}>
+          {/* Incoming Orders Queue */}
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">Order Queue</h3>
+              <h3 className="card-title">
+                <button
+                  className="btn btn-primary"
+                  style={{ fontWeight: 600, fontSize: '1.1rem' }}
+                  onClick={() => setShowIncomingModal(true)}
+                >
+                  Incoming Orders ({incomingOrders.length})
+                </button>
+              </h3>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem' }}>
+                New orders awaiting your response
+              </p>
             </div>
             <div className="card-content">
-              {processingOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="order-item clickable-order"
-                  onClick={() => handleOrderClick(order.id)}
-                >
-                  <div className="order-info">
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--spacing-1)" }}>
-                      <h3>Order #{order.id}</h3>
-                      <span style={{ fontSize: "0.75rem", color: "var(--muted-foreground)" }}>{order.orderTime}</span>
+              {incomingOrders.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: 'var(--spacing-8)',
+                  color: 'var(--muted-foreground)'
+                }}>
+                  <Clock size={48} style={{ margin: '0 auto var(--spacing-4)' }} />
+                  <p>No new orders</p>
+                </div>
+              ) : (
+                incomingOrders.map(order => (
+                  <div key={order.orderid} className="order-item">
+                    <div className="order-info" style={{ flex: 1 }}>
+                      <h4 style={{ fontWeight: 600, marginBottom: 'var(--spacing-1)' }}>
+                        Order #{order.orderid}
+                      </h4>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+                        {order.customer_name} • {formatTime(order.created_at)}
+                      </p>
+                      <p style={{ fontSize: '0.875rem', marginTop: 'var(--spacing-1)' }}>
+                        {(order.items || []).join(', ')}
+
+                      </p>
+                      <p style={{ fontWeight: 600, marginTop: 'var(--spacing-1)' }}>
+                        ${(order.total_amount || 0).toFixed(2)}
+                      </p>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-1)", marginBottom: "var(--spacing-1)" }}>
-                      <User size={12} />
-                      <span style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>{order.student}</span>
-                    </div>
-                    <p style={{ fontSize: "0.875rem", marginBottom: "var(--spacing-1)" }}>{order.items.join(", ")}</p>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontWeight: 600 }}>${order.total}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-1)", fontSize: "0.75rem", color: "var(--muted-foreground)" }}>
-                        <Clock size={12} />
-                        {order.pickupTime}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="order-actions">
-                    <span className={`badge ${order.status === 'ready' ? 'badge-success' : order.status === 'processing' ? 'badge-warning' : 'badge-default'}`}>
-                      {order.status}
-                    </span>
-                    {order.status === 'pending' && (
+                    <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
                       <button
-                        className="btn btn-sm btn-primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateOrderStatus(order.id, 'processing');
-                        }}
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleAcceptOrder(order.orderid)}
                       >
+                        <CheckCircle size={16} />
                         Accept
                       </button>
-                    )}
-                    {order.status === 'processing' && (
                       <button
-                        className="btn btn-sm btn-primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateOrderStatus(order.id, 'ready');
-                        }}
+                        className="btn btn-outline btn-sm"
+                        onClick={() => handleRejectOrder(order.orderid)}
                       >
-                        Mark Ready
+                        <XCircle size={16} />
+                        Reject
                       </button>
-                    )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
-          {/* Quick Actions */}
+          {/* Approved Orders Queue */}
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">Quick Actions</h3>
+              <h3 className="card-title">
+                <button
+                  className="btn btn-primary"
+                  style={{ fontWeight: 600, fontSize: '1.1rem' }}
+                  onClick={() => setShowApprovedModal(true)}
+                >
+                  Approved Orders ({approvedOrders.length})
+                </button>
+              </h3>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem' }}>
+                Orders in progress
+              </p>
             </div>
             <div className="card-content">
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-4)" }}>
-                <button className="btn btn-outline quick-action-btn">
-                  <a href="/vendor/menu" style={{ color: "inherit", textDecoration: "none" }}>
-                    Manage Menu
-                  </a>
-                </button>
-                <button className="btn btn-outline quick-action-btn">
-                  <a href="/vendor/reports" style={{ color: "inherit", textDecoration: "none" }}>
-                    View Reports
-                  </a>
-                </button>
-                <button className="btn btn-outline quick-action-btn">
-                  Toggle Availability
-                </button>
-              </div>
+              {approvedOrders.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: 'var(--spacing-8)',
+                  color: 'var(--muted-foreground)'
+                }}>
+                  <CheckCircle size={48} style={{ margin: '0 auto var(--spacing-4)' }} />
+                  <p>No orders in progress</p>
+                </div>
+              ) : (
+                approvedOrders.map(order => (
+                  <div key={order.orderid} className="order-item">
+                    <div className="order-info" style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-1)' }}>
+                        <h4 style={{ fontWeight: 600 }}>Order #{order.orderid}</h4>
+                        {getStatusBadge(order.order_status)}
+                      </div>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+                        {order.student_number} • Accepted {formatTime(order.time_accepted)}
+                      </p>
+                      <p style={{ fontSize: '0.875rem', marginTop: 'var(--spacing-1)' }}>
+                        {(order.items || []).join(', ')}
+                      </p>
+                      <p style={{ fontWeight: 600, marginTop: 'var(--spacing-1)' }}>
+                        ${(order.total_amount || 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
+                      {order.order_status === 'preparing' && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handleMarkReady(order.orderid)}
+                        >
+                          Mark Ready
+                        </button>
+                      )}
+                      {order.order_status === 'ready' && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleMarkCollected(order.orderid)}
+                        >
+                          Mark Collected
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* MODALS - overlay */}
+        {showIncomingModal && (
+          <div
+            className="orders-modal"
+            style={{
+              position: "fixed",
+              zIndex: 999,
+              inset: 0,
+              background: "rgba(17,24,39,0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+            onClick={() => setShowIncomingModal(false)}
+          >
+            <div
+              className="orders-modal-content"
+              style={{
+                background: "var(--card)",
+                color: "var(--card-foreground)",
+                borderRadius: "var(--radius-lg)",
+                padding: "var(--spacing-8)",
+                maxWidth: 600,
+                width: "95vw",
+                maxHeight: "80vh",
+                overflowY: "auto",
+                boxShadow: "var(--shadow-lg)",
+                position: "relative"
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                style={{
+                  position: "absolute", top: 10, right: 10,
+                  background: "transparent", border: "none", fontSize: 24, cursor: "pointer", color: "var(--muted-foreground)"
+                }}
+                onClick={() => setShowIncomingModal(false)}
+                aria-label="Close"
+              >×</button>
+              <h2 style={{ marginBottom: 'var(--spacing-6)', fontWeight: 700 }}>Incoming Orders</h2>
+              {incomingOrders.length === 0 ? (
+                <div style={{ textAlign: "center", color: "var(--muted-foreground)" }}>No incoming orders.</div>
+              ) : (
+                incomingOrders.map(order => (
+                  <div key={order.orderid} className="order-item" style={{ background: "var(--muted)", marginBottom: 'var(--spacing-3)' }}>
+                    <div className="order-info" style={{ flex: 1 }}>
+                      <h4 style={{ fontWeight: 600, marginBottom: 'var(--spacing-1)' }}>
+                        Order #{order.orderid}
+                      </h4>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+                        Student: {order.student_number} • Created: {formatTime(order.created_at)} • To be received: {getTimeslotTime(order.timeslotid)}
+                      </p>
+                      <p style={{ fontSize: '0.875rem', marginTop: 'var(--spacing-1)' }}>
+                        {(order.items || []).join(', ')}
+                      </p>
+                      <p style={{ fontWeight: 600, marginTop: 'var(--spacing-1)' }}>
+                        ${(order.total_amount || 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
+                      <button className="btn btn-primary btn-sm" onClick={() => handleAcceptOrder(order.orderid)}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <CheckCircle size={16} /> Accept
+                        </span>
+                      </button>
+                      <button className="btn btn-outline btn-sm" onClick={() => handleRejectOrder(order.orderid)}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <XCircle size={16} /> Reject
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {showApprovedModal && (
+          <div
+            className="orders-modal"
+            style={{
+              position: "fixed",
+              zIndex: 999,
+              inset: 0,
+              background: "rgba(17,24,39,0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+            onClick={() => setShowApprovedModal(false)}
+          >
+            <div
+              className="orders-modal-content"
+              style={{
+                background: "var(--card)",
+                color: "var(--card-foreground)",
+                borderRadius: "var(--radius-lg)",
+                padding: "var(--spacing-8)",
+                maxWidth: 600,
+                width: "95vw",
+                maxHeight: "80vh",
+                overflowY: "auto",
+                boxShadow: "var(--shadow-lg)",
+                position: "relative"
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                style={{
+                  position: "absolute", top: 10, right: 10,
+                  background: "transparent", border: "none", fontSize: 24, cursor: "pointer", color: "var(--muted-foreground)"
+                }}
+                onClick={() => setShowApprovedModal(false)}
+                aria-label="Close"
+              >×</button>
+              <h2 style={{ marginBottom: 'var(--spacing-6)', fontWeight: 700 }}>Approved Orders</h2>
+              {approvedOrders.length === 0 ? (
+                <div style={{ textAlign: "center", color: "var(--muted-foreground)" }}>No approved orders.</div>
+              ) : (
+                approvedOrders.map(order => (
+                  <div key={order.orderid} className="order-item" style={{ background: "var(--muted)", marginBottom: 'var(--spacing-3)' }}>
+                    <div className="order-info" style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-1)' }}>
+                        <h4 style={{ fontWeight: 600 }}>Order #{order.orderid}</h4>
+                        {getStatusBadge(order.order_status)}
+                      </div>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+                        Student: {order.student_number} • Accepted: {formatTime(order.time_accepted)}
+                      </p>
+                      <p style={{ fontSize: '0.875rem', marginTop: 'var(--spacing-1)' }}>
+                        {(order.items || []).join(', ')}
+                      </p>
+                      <p style={{ fontWeight: 600, marginTop: 'var(--spacing-1)' }}>
+                        ${(order.total_amount || 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
+                      {order.order_status === 'processing' && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handleMarkReady(order.orderid)}
+                        >
+                          Mark Ready
+                        </button>
+                      )}
+                      {order.order_status === 'ready' && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleMarkCollected(order.orderid)}
+                        >
+                          Mark Collected
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+
+        {/* Quick Actions Panel */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Quick Actions</h3>
+          </div>
+          <div className="card-content">
+            <div className="grid grid-3 gap-4">
+              <button className="btn btn-outline btn-lg">
+                View Menu
+              </button>
+              <button className="btn btn-outline btn-lg">
+                Update Hours
+              </button>
+              <button className="btn btn-outline btn-lg">
+                View Analytics
+              </button>
             </div>
           </div>
         </div>
@@ -364,5 +741,6 @@ const VendorDashboard = () => {
     </div>
   );
 };
+
 
 export default VendorDashboard;

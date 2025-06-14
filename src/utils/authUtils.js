@@ -47,13 +47,13 @@ export const registerUser = async ({ role, email, password, extraFields }) => {
       if (error) throw error;
     }
   } catch (dbError) {
-    //Rollback auth user if DB insert fails
+    //Rollback auth user here if DB insert fails
 
   }
 };
 
-// Login user
 
+// Login user
 export const loginUser = async ({ unameemail, password, role, navigate }) => {
   try {
     let validEmail = null;
