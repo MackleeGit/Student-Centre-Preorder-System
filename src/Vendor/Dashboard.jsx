@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock, CheckCircle, XCircle, Bell, Search, Package, DollarSign, TrendingUp, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import "../css/dashboard.css";
 import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast, showInfoToast, showSuccessToast } from "../components/Toast/toastUtils.jsx";
@@ -281,53 +281,6 @@ const VendorDashboard = () => {
 
 
 
-  // Render for modal order details (shared by both modals)
-  const renderOrderDetails = (order, isIncoming) => (
-    <div key={order.orderid} className="border rounded-lg p-4 mb-4 bg-white shadow-sm">
-      <div className="flex flex-col gap-1 md:flex-row md:justify-between md:items-center">
-        <div className="font-semibold">Order #{order.orderid}</div>
-        {getStatusBadge(order.order_status)}
-      </div>
-      <div className="mt-2 text-sm text-gray-600 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-        <span>Student: <span className="font-medium">{order.student_number}</span></span>
-        <span>Created: <span className="font-mono">{formatDate(order.created_at)} {formatTime(order.created_at)}</span></span>
-        <span>Time To Be Received: <span className="font-mono">{order.timeslotid ? (timeslotMap[order.timeslotid] || order.timeslotid) : '-'}</span></span>
-      </div>
-      <div className="mt-2 text-sm text-gray-800">
-        <span className="font-semibold">Items:</span> {(order.items || []).join(', ')}
-      </div>
-      <div className="text-md font-bold mt-2">${(order.total_amount || 0).toFixed(2)}</div>
-      <div className="mt-3 flex gap-2 flex-wrap">
-        {isIncoming ? (
-          <>
-            <Button variant="success" size="sm" onClick={() => handleAcceptOrder(order.orderid)}>
-              <CheckCircle size={16} className="mr-2" /> Accept
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => handleRejectOrder(order.orderid)}>
-              <XCircle size={16} className="mr-2" /> Reject
-            </Button>
-          </>
-        ) : (
-          <>
-            {order.order_status === 'processing' && (
-              <Button variant="success" size="sm" onClick={() => handleMarkReady(order.orderid)}>
-                Mark Ready
-              </Button>
-            )}
-            {order.order_status === 'ready' && (
-              <Button variant="secondary" size="sm" onClick={() => handleMarkCollected(order.orderid)}>
-                Mark Collected
-              </Button>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-
-
-
-
   return (
     <div style={{ minHeight: '100vh', background: 'var(--muted)' }}>
       {/* Header */}
@@ -402,6 +355,13 @@ const VendorDashboard = () => {
                 )}
 
               </div>
+
+              <button
+                className="btn btn-outline"
+                onClick={handleLogout}
+              >
+                Log Out
+              </button>
             </div>
           </div>
         </div>
@@ -725,15 +685,27 @@ const VendorDashboard = () => {
           </div>
           <div className="card-content">
             <div className="grid grid-3 gap-4">
-              <button className="btn btn-outline btn-lg">
-                View Menu
-              </button>
-              <button className="btn btn-outline btn-lg">
-                Update Hours
-              </button>
-              <button className="btn btn-outline btn-lg">
-                View Analytics
-              </button>
+              <Link
+                to="/vendor/viewmenu"
+                style={{ textDecoration: "none" }}
+                className="btn btn-outline btn-lg"
+              >View Menu Items
+              </Link>
+
+              <Link
+                to="/vendor/vendorprofile"
+                style={{ textDecoration: "none" }}
+                className="btn btn-outline btn-lg"
+              >View Profile
+              </Link>
+
+
+              <Link
+                to="/vendor/viewanalytics"
+                style={{ textDecoration: "none" }}
+                className="btn btn-outline btn-lg"
+              >View Business Analytics
+              </Link>
             </div>
           </div>
         </div>

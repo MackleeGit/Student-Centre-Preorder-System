@@ -1,24 +1,25 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabaseClient.js";
 
-export const useRealtimeNotifications = (vendorId) => {
+export const useRealtimeNotifications = (uid) => {
   const [notifications, setNotifications] = useState([]);
   const [initialNotificationLoading, setInitialNotificationLoading] = useState(true);
   const [isRefreshingNotifications, setIsRefreshingNotifications] = useState(false);
 
 
   const fetchNotifications = async () => {
-    if (!vendorId) return;
+    if (!uid) return;
 
     setInitialNotificationLoading(true);
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
-      .eq("recipient", vendorId)
+      .eq("recipient", uid)
       .order("timestamp", { ascending: false });
 
     if (error) {
       console.error("Error fetching notifications:", error);
+      setInitialNotificationLoading(false);
 
       return;
     }
@@ -30,12 +31,12 @@ export const useRealtimeNotifications = (vendorId) => {
 
 
   const refetchNotifications = async () => {
-    if (!vendorId) return;
+    if (!uid) return;
     setIsRefreshingNotifications(true);
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
-      .eq("recipient", vendorId)
+      .eq("recipient", uid)
       .order("timestamp", { ascending: false });
 
     if (error) {
@@ -50,7 +51,7 @@ export const useRealtimeNotifications = (vendorId) => {
   };
 
   useEffect(() => {
-    if (!vendorId) return;
+    if (!uid) return;
 
 
     // Initial fetch
@@ -84,7 +85,7 @@ export const useRealtimeNotifications = (vendorId) => {
 
   useEffect(() => {
     fetchNotifications();
-  }, [vendorId]);
+  }, [uid]);
 
   return {
     notifications,

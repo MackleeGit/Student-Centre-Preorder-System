@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, ShoppingCart, Bell, Clock } from "lucide-react";
 import "../css/dashboard.css";
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
 import { useRealtimeNotifications } from "../components/hooks/useRealtimeNotifications.jsx";
+import { useStudentOrders } from "../components/hooks/useStudentOrders.js";
 import { supabase } from "../utils/supabaseClient.js";
 import { Link } from "react-router-dom";
 import RatingDisplay from "../components/rating/RatingDisplay.jsx";
@@ -23,9 +23,6 @@ const StudentDashboard = () => {
 
     const [menuResults, setMenuResults] = useState([]);
     const [vendorResults, setVendorResults] = useState([]);
-    const [activeOrders, setActiveOrders] = useState([]);
-    const [recentOrders, setRecentOrders] = useState([]);
-
     const [vendors, setVendors] = useState([]);
 
 
@@ -65,75 +62,88 @@ const StudentDashboard = () => {
 
 
 
-        const fetchVendors = async () => {
-
-            const { data: vendors, error } = await supabase
-                .from('vendors')
-                .select('id, name, image_url')
-                .eq('availability', 'open');
-
-            if (vendors) {
-                // Randomize order client-side
-                const shuffledVendors = vendors.sort(() => 0.5 - Math.random());
-                setVendors(shuffledVendors);  // <-- use it here inside the if block
-            } else if (error) {
-                console.error("Error fetching Available Vendors", error);
-            }
-
-        };
-        fetchVendors();
-
-
-
-
-
-
     }, []);
 
 
+    const {
+        notifications,
+        initialNotificationLoading,
+        isRefreshingNotifications,
+        markAsRead,
+        formatNotificationTime,
+        refetchNotifications,
+        fetchNotifications
+    } = useRealtimeNotifications(UserData?.student_number || null);
+
+    const {
+        activeOrders,
+        availableVendors,
+        recentOrders,
+        initialOrderLoading,
+        isRefreshingOrders,
+        fetchOrders,
+        refetchOrders,
+        setActiveOrders,
+        setRecentOrders,
+        fetchAvailableVendors,
+        refetchAvailableVendors
+    } = useStudentOrders(UserData?.student_number || null);
 
 
     useEffect(() => {
         if (!UserData?.student_number) return;
+        fetchNotifications();
+        fetchOrders();
+        fetchAvailableVendors();
 
-        const fetchActiveOrders = async () => {
-            const { data, error } = await supabase
-                .from("orders")
-                .select("orderid, vendorid, order_status, created_at, time_accepted")
-                .eq("student_number", UserData.student_number)
-                .in("order_status", ["pending", "processing", "ready"])
-                .order("created_at", { ascending: false });
-
-            if (!error) {
-                setActiveOrders(data);
-            } else {
-                console.error("Error fetching active orders:", error);
-            }
+        const poll = () => {
+            console.log('⏰ Polling Supabase for updates...');
+            refetchOrders();
+            refetchNotifications();
+            refetchAvailableVendors();
         };
-        fetchActiveOrders();
 
-        const fetchRecentOrders = async () => {
-            const { data, error } = await supabase
-                .from("orders")
-                .select("orderid, vendorid, order_status,created_at")
-                .eq("student_number", UserData.student_number)
-                .eq("order_status", "collected")
-                .order("created_at", { ascending: false })
-                .limit(5);
-
-            if (!error) {
-                setRecentOrders(data);
-            } else {
-                console.error("Error fetching recent orders:", error);
+        const intervalId = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                poll();
             }
-        };
-        fetchRecentOrders();
+        }, 15000);
 
-    }, [UserData]);
-    // Custom hook using vendor ID
-    const { notifications, loading: notificationsLoading, markAsRead, } = useRealtimeNotifications(UserData?.id);
+        return () => clearInterval(intervalId);
+    }, [UserData?.student_number]);
 
-    if (loadingUser || notificationsLoading) return <p>Loading dashboard...</p>;
+
+
+
+
+    const lastNotifId = useRef(null);
+    const lastActiveOrderId = useRef(null);
+
+
+    useEffect(() => {
+        if (notifications.length > 0) {
+            const latest = notifications[0].notifid;
+            if (lastNotifId.current && latest !== lastNotifId.current) {
+                showSuccessToast("🔔 New Notification", "");
+            }
+            lastNotifId.current = latest;
+        }
+    }, [notifications]);
+
+    useEffect(() => {
+        if (activeOrders.length > 0) {
+            const latest = activeOrders[0].orderid;
+            if (lastActiveOrderId.current && latest !== lastActiveOrderId.current) {
+                showSuccessToast("New Order Incoming", "");
+            }
+            lastActiveOrderId.current = latest;
+        }
+    }, [activeOrders]);
+
+
+
+
+    if (loadingUser || initialOrderLoading || initialNotificationLoading) return <p>Loading dashboard...</p>;
 
     const unreadCount = notifications.filter(notif => !notif.read).length;
 
@@ -251,11 +261,7 @@ const StudentDashboard = () => {
                             )}
 
                         </div>
-                        <button className="btn btn-outline btn-icon">
-                            <a href="/student/cart" style={{ color: "inherit", textDecoration: "none" }}>
-                                <ShoppingCart size={16} />
-                            </a>
-                        </button>
+                
                         <button
                             className="btn btn-outline"
                             onClick={handleLogout}
@@ -332,8 +338,8 @@ const StudentDashboard = () => {
                                 <div className="grid grid-3 gap-4">
                                     {vendorResults.map(vendor => (
                                         <Link
-                                            key={vendor.id}
-                                            to={`/student/viewvendor/${vendor.id}`}
+                                            key={vendor.vendorid}
+                                            to={`/student/viewvendor/${vendor.vendorid}`}
                                             className="search-result-card"
                                             style={{ textDecoration: "none", color: "inherit" }}
                                         >
@@ -394,7 +400,7 @@ const StudentDashboard = () => {
                             <h3 className="card-title">Available Vendors</h3>
                         </div>
                         <div className="card-content">
-                            {vendors.map((vendor) => (
+                            {availableVendors.map((vendor) => (
                                 <div key={vendor.id} className="vendor-item">
                                     <div className="vendor-info">
                                         <h3>{vendor.name}</h3>
@@ -405,7 +411,7 @@ const StudentDashboard = () => {
                                             {vendor.availability ? "Open" : "Closed"}
                                         </span>
                                         <Link
-                                            to={`/student/viewvendor/${vendor.id}`}
+                                            to={`/student/viewvendor/${vendor.vendorid}`}
                                             className={`btn btn-sm ${vendor.availability ? 'btn-primary' : 'btn-secondary'}`}
                                             style={{ textDecoration: "none" }}
                                         >

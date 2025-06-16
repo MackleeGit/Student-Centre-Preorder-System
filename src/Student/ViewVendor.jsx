@@ -37,7 +37,7 @@ const ViewVendor = () => {
             const { data: vendorData, error: vendorError } = await supabase
                 .from('vendors')
                 .select('*')
-                .eq('id', vendorid)
+                .eq('vendorid', vendorid)
                 .single();
 
             if (vendorError) throw vendorError;
