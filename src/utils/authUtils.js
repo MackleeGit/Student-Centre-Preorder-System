@@ -52,12 +52,12 @@ export const registerUser = async ({ role, email, password, extraFields }) => {
   }
 };
 
+
+
 // Login user
-
-
 export const loginUser = async ({ unameemail, password, role, navigate }) => {
   try {
-    // First attempt: try logging in directly (email for vendor, email or student_number for student)
+    // First attempt: try logging in directly
     const { error: initialError } = await supabase.auth.signInWithPassword({
       email: unameemail,
       password,
@@ -69,6 +69,8 @@ export const loginUser = async ({ unameemail, password, role, navigate }) => {
         navigate("/student/dashboard");
       } else if (role === "vendor") {
         navigate("/vendor/dashboard");
+      } else if (role === "admin") { // <-- ADD THIS BLOCK
+        navigate("/admin/dashboard");
       }
       return;
     }
@@ -98,14 +100,13 @@ export const loginUser = async ({ unameemail, password, role, navigate }) => {
       return;
     }
 
-    // If vendor login failed or student fallback didn't apply
+    // If all else fails, throw the original error
     throw initialError;
 
   } catch (err) {
     throw err;
   }
 };
-
 
 
 // Logout
