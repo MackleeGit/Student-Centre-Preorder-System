@@ -9,7 +9,7 @@ const Dashboard = () => {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: "#f9fafb", // optional soft background
+      backgroundColor: "#f9fafb",
     }}>
       <h1 style={{ fontSize: "2.5rem", fontWeight: "bold" }}>Admin Dashboard</h1>
     </div>

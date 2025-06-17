@@ -4,6 +4,7 @@ import Index from "./Index";
 import Register from "./Register";
 import StudentDashboard from "./Student/Dashboard";
 import ViewVendor from "./Student/ViewVendor";
+import ViewOrders from "./Student/ViewOrders";
 
 
 import VendorDashboard from "./Vendor/Dashboard";
@@ -31,17 +32,18 @@ function App() {
           },
         }}
       />
-      
+
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
-         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/student/dashboard" element={<StudentDashboard />} />
         <Route path="/student/viewvendor/:vendorid" element={<ViewVendor />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard/>} />
-        <Route path="/vendor/viewmenu" element={<ViewMenu/>} />
-           <Route path="/vendor/viewanalytics" element={<ViewAnalytics/>} />
-              <Route path="/vendor/vendorprofile" element={<VendorProfile/>} />
+        <Route path="/student/vieworders" element={<ViewOrders />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/vendor/viewmenu" element={<ViewMenu />} />
+        <Route path="/vendor/viewanalytics" element={<ViewAnalytics />} />
+        <Route path="/vendor/vendorprofile" element={<VendorProfile />} />
         <Route path="/vendor/dashboard" element={<VendorDashboard />} />
         <Route path="/admin" element={<Index />} />
         <Route path="/register" element={<Register />} />

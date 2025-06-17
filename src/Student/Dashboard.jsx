@@ -10,28 +10,22 @@ import { supabase } from "../utils/supabaseClient.js";
 import { Link } from "react-router-dom";
 import RatingDisplay from "../components/rating/RatingDisplay.jsx";
 
-
-
 const StudentDashboard = () => {
-
     const navigate = useNavigate();
     const [UserData, setUserData] = useState(null);
     const [loadingUser, setLoadingUser] = useState(true);
     const [showNotifications, setShowNotifications] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [showOrderModal, setShowOrderModal] = useState(false);
 
     const [menuResults, setMenuResults] = useState([]);
     const [vendorResults, setVendorResults] = useState([]);
     const [vendors, setVendors] = useState([]);
 
-
-
-
     useEffect(() => {
         checkAuth(navigate);
         checkUserRole("student", navigate);
-
 
         const fetchStudent = async () => {
             const { data: user, error: authError } = await supabase.auth.getUser();
@@ -59,11 +53,7 @@ const StudentDashboard = () => {
             setLoadingUser(false);
         };
         fetchStudent();
-
-
-
     }, []);
-
 
     const {
         notifications,
@@ -89,7 +79,6 @@ const StudentDashboard = () => {
         refetchAvailableVendors
     } = useStudentOrders(UserData?.student_number || null);
 
-
     useEffect(() => {
         if (!UserData?.student_number) return;
         fetchNotifications();
@@ -112,13 +101,8 @@ const StudentDashboard = () => {
         return () => clearInterval(intervalId);
     }, [UserData?.student_number]);
 
-
-
-
-
     const lastNotifId = useRef(null);
     const lastActiveOrderId = useRef(null);
-
 
     useEffect(() => {
         if (notifications.length > 0) {
@@ -140,13 +124,70 @@ const StudentDashboard = () => {
         }
     }, [activeOrders]);
 
+    // Fetch detailed order information for modal
+    const fetchOrderDetails = async (orderid) => {
+        const { data: orderData, error: orderError } = await supabase
+            .from('orders')
+            .select(`
+                orderid,
+                vendorid,
+                student_number,
+                created_at,
+                time_accepted,
+                order_status,
+                total,
+                vendors (name),
+                order_items (
+                    quantity,
+                    menuitems (name, price)
+                )
+            `)
+            .eq('orderid', orderid)
+            .single();
+
+        if (orderError) {
+            console.error('Error fetching order details:', orderError);
+            return null;
+        }
+
+        return orderData;
+    };
+
+    const handleOrderClick = async (order) => {
+        const orderDetails = await fetchOrderDetails(order.orderid);
+        if (orderDetails) {
+            setSelectedOrder(orderDetails);
+            setShowOrderModal(true);
+        }
+    };
+
+  const getStatusBadge = (order_status) => {
+    switch (order_status) {
+      case 'pending':
+        return <span className="badge badge-warning">Pending</span>;
+      case 'accepted':
+      case 'preparing':
+        return <span className="badge badge-secondary">Preparing</span>;
+      case 'ready':
+        return <span className="badge badge-success">Ready</span>;
+      default:
+        return <span className="badge badge-default">{order_status}</span>;
+    }
+  };
 
 
+    // Modal scroll lock
+    useEffect(() => {
+        if (showOrderModal) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+    }, [showOrderModal]);
 
     if (loadingUser || initialOrderLoading || initialNotificationLoading) return <p>Loading dashboard...</p>;
 
     const unreadCount = notifications.filter(notif => !notif.read).length;
-
 
     const handleLogout = async () => {
         const confirmed = await showConfirmToast("Are you sure you wish to log out?");
@@ -161,7 +202,6 @@ const StudentDashboard = () => {
             setVendorResults([]);
             return;
         }
-        // Search Menu Items
         const { data: menuItems, error: menuError } = await supabase
             .from('menuitems')
             .select('menuitemid, name, price, vendorid')
@@ -173,10 +213,9 @@ const StudentDashboard = () => {
             setMenuResults([]);
         }
 
-        // Search Vendors
         const { data: vendorResults, error: vendorError } = await supabase
             .from('vendors')
-            .select('id, name, image_url')
+            .select('vendorid, name, image_url')
             .ilike('name', `%${searchTerm}%`);
 
         if (!vendorError && vendorResults) {
@@ -192,14 +231,10 @@ const StudentDashboard = () => {
         performSearch(term);
     };
 
-
-
-
-    const studentName = `${UserData?.fname} ${UserData?.lname}`
+    const studentName = `${UserData?.fname} ${UserData?.lname}`;
 
     return (
         <div style={{ minHeight: "100vh", background: "var(--background)" }}>
-            {/* Header */}
             <header className="header">
                 <div className="container flex items-center justify-between">
                     <h1 className="header-title">STC Preorder System</h1>
@@ -210,7 +245,6 @@ const StudentDashboard = () => {
                                 onClick={() => setShowNotifications(!showNotifications)}
                             >
                                 <Bell size={16} />
-
                                 {unreadCount > 0 && (
                                     <span style={{
                                         position: 'absolute',
@@ -230,7 +264,6 @@ const StudentDashboard = () => {
                                         {unreadCount > 9 ? '9+' : unreadCount}
                                     </span>
                                 )}
-
                             </button>
                             {showNotifications && (
                                 <div className="notification-menu">
@@ -241,34 +274,21 @@ const StudentDashboard = () => {
                                         <div key={notif.notifid} className="notification-item">
                                             <div className="notification-title">{notif.message}</div>
                                             <div className="notification-time">{formatNotificationTime(notif.timestamp)}</div>
-
                                             {!notif.read && (
-
                                                 <button
                                                     onClick={() => markAsRead(notif.notifid)}
                                                     className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow" >
                                                     Mark as Read
                                                 </button>
-
-
                                             )}
-
-
-
                                         </div>
                                     ))}
                                 </div>
                             )}
-
                         </div>
-                
-                        <button
-                            className="btn btn-outline"
-                            onClick={handleLogout}
-                        >
+                        <button className="btn btn-outline" onClick={handleLogout}>
                             Log Out
                         </button>
-
                         <button className="btn btn-outline">
                             <a href="/student/profile" style={{ color: "inherit", textDecoration: "none" }}>Profile</a>
                         </button>
@@ -277,7 +297,6 @@ const StudentDashboard = () => {
             </header>
 
             <div className="container" style={{ padding: "var(--spacing-6) var(--spacing-4)" }}>
-                {/* Search Bar */}
                 <div style={{ marginBottom: "var(--spacing-6)" }}>
                     <div className="input-with-icon">
                         <Search className="input-icon" size={16} />
@@ -291,10 +310,8 @@ const StudentDashboard = () => {
                     </div>
                 </div>
 
-                {/* Search Results */}
                 {(menuResults.length > 0 || vendorResults.length > 0) && (
                     <div className="search-results" style={{
-
                         border: "3px solid var(--primary)",
                         borderRadius: "8px",
                         padding: "1rem",
@@ -305,7 +322,6 @@ const StudentDashboard = () => {
                             Search Results
                         </h3>
 
-                        {/* Menu Items */}
                         {menuResults.length > 0 && (
                             <div style={{
                                 marginTop: "var(--spacing-6)",
@@ -316,8 +332,7 @@ const StudentDashboard = () => {
                                 <h4>Menu Items</h4>
                                 <div className="grid grid-3 gap-4">
                                     {menuResults.map(item => (
-                                        <div key={item.menuitemid}
-                                            className="search-result-card">
+                                        <div key={item.menuitemid} className="search-result-card">
                                             <div className="search-result-title">{item.name}</div>
                                             <div style={{ fontWeight: "bold" }}>${item.price}</div>
                                         </div>
@@ -326,7 +341,6 @@ const StudentDashboard = () => {
                             </div>
                         )}
 
-                        {/* Vendors */}
                         {vendorResults.length > 0 && (
                             <div style={{
                                 marginTop: "var(--spacing-6)",
@@ -352,7 +366,6 @@ const StudentDashboard = () => {
                     </div>
                 )}
 
-
                 {/* Welcome Section and Active Orders */}
                 <div className="welcome-section">
                     <div className="welcome-text">
@@ -366,19 +379,24 @@ const StudentDashboard = () => {
                         <div className="card-content">
                             {activeOrders.length > 0 ? (
                                 activeOrders.slice(0, 5).map((activeorder) => (
-                                    <div key={activeorder.orderid} className="order-item">
+                                    <div 
+                                        key={activeorder.orderid} 
+                                        className="order-item"
+                                        onClick={() => handleOrderClick(activeorder)}
+                                        style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                                        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--muted)'}
+                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                    >
                                         <div className="order-info">
-                                            <h3>{activeorder.vendorid}</h3>
-                                            <p>Place Order Items</p>
-                                            <p>$Place Total Price</p>
+                                            <h3>Order #{activeorder.orderid}</h3>
+                                            <p>Vendor ID: {activeorder.vendorid}</p>
+                                            <p>${activeorder.total || 'N/A'}</p>
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)" }}>
-                                            <span className={`badge ${activeorder.order_status === 'ready' ? 'badge-success' : activeorder.order_status === 'processing' ? 'badge-warning' : 'badge-default'}`}>
-                                                {activeorder.order_status}
-                                            </span>
+                                           {getStatusBadge(activeorder.order_status)};
                                             <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-1)", fontSize: "0.75rem", color: "var(--muted-foreground)" }}>
                                                 <Clock size={12} />
-                                                {activeorder.created_at}
+                                                {new Date(activeorder.created_at).toLocaleDateString()}
                                             </div>
                                         </div>
                                     </div>
@@ -392,7 +410,6 @@ const StudentDashboard = () => {
                     </div>
                 </div>
 
-
                 <div className="grid grid-2 gap-4">
                     {/* Available Vendors */}
                     <div className="card">
@@ -401,13 +418,22 @@ const StudentDashboard = () => {
                         </div>
                         <div className="card-content">
                             {availableVendors.map((vendor) => (
-                                <div key={vendor.id} className="vendor-item">
+                                <div key={vendor.vendorid} className="vendor-item">
                                     <div className="vendor-info">
                                         <h3>{vendor.name}</h3>
-                                        <p>{vendor.items} items • ⭐ {5}</p>
+                                        <p>{vendor.items || 0} items • ⭐ {vendor.rating || 5}</p>
                                     </div>
                                     <div className="vendor-actions">
-                                        <span className={`badge ${vendor.availability ? 'badge-success' : 'badge-secondary'}`}>
+                                        <span 
+                                            className="badge"
+                                            style={{ 
+                                                backgroundColor: vendor.availability ? '#10b981' : '#6b7280',
+                                                color: 'white',
+                                                padding: '4px 8px',
+                                                borderRadius: '4px',
+                                                fontSize: '0.75rem'
+                                            }}
+                                        >
                                             {vendor.availability ? "Open" : "Closed"}
                                         </span>
                                         <Link
@@ -429,27 +455,109 @@ const StudentDashboard = () => {
                             <h3 className="card-title">Recent Orders</h3>
                         </div>
                         <div className="card-content">
-                            {recentOrders.map((order) => (
-                                <div key={order.id} className="order-item">
+                            {recentOrders.slice(0, 5).map((order) => (
+                                <div 
+                                    key={order.orderid} 
+                                    className="order-item"
+                                    onClick={() => handleOrderClick(order)}
+                                    style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                                    onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--muted)'}
+                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                >
                                     <div className="order-info">
-                                        <h3>{order.vendor}</h3>
-                                        <p>${order.total} • {order.date}</p>
+                                        <h3>Order #{order.orderid}</h3>
+                                        <p>${order.total || 'N/A'} • {new Date(order.created_at).toLocaleDateString()}</p>
                                     </div>
-                                    <span className={`badge ${order.order_status === 'collected' ? 'badge-success' : 'badge-secondary'}`}>
-                                        {order.order_status}
-                                    </span>
+                                    {getStatusBadge(order.order_status)};
                                 </div>
                             ))}
-                            <button className="btn btn-outline" style={{ width: "100%", marginTop: "var(--spacing-4)" }}>
-                                <a href="/student/orders" style={{ color: "inherit", textDecoration: "none" }}>
-                                    View All Orders
-                                </a>
-                            </button>
+                            <Link
+                                to="/student/vieworders"
+                                className="btn btn-outline"
+                                style={{ width: "100%", marginTop: "var(--spacing-4)", textDecoration: "none" }}
+                            >
+                                View All Orders
+                            </Link>
                         </div>
                     </div>
                 </div>
             </div>
-        </div >
+
+            {/* Order Details Modal */}
+            {showOrderModal && selectedOrder && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 2000
+                    }}
+                    onClick={() => setShowOrderModal(false)}
+                >
+                    <div
+                        className="card"
+                        style={{
+                            minWidth: 500,
+                            maxWidth: 600,
+                            padding: "var(--spacing-8)",
+                            background: "var(--card)",
+                            borderRadius: "1rem",
+                            boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Order Details</h3>
+                            <button
+                                onClick={() => setShowOrderModal(false)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    fontSize: '1.5rem',
+                                    cursor: 'pointer',
+                                    color: 'var(--muted-foreground)'
+                                }}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        
+                        <div style={{ marginBottom: '1rem' }}>
+                            <p><strong>Order ID:</strong> #{selectedOrder.orderid}</p>
+                            <p><strong>Vendor:</strong> {selectedOrder.vendors?.name || `Vendor ID: ${selectedOrder.vendorid}`}</p>
+                            <p><strong>Created At:</strong> {new Date(selectedOrder.created_at).toLocaleString()}</p>
+                            {selectedOrder.time_accepted && (
+                                <p><strong>Approved At:</strong> {new Date(selectedOrder.time_accepted).toLocaleString()}</p>
+                            )}
+                            <p><strong>Status:</strong> 
+                                {getStatusBadge(selectedOrder.order_status)};
+                            </p>
+                            <p><strong>Total:</strong> ${selectedOrder.total || 'N/A'}</p>
+                        </div>
+
+                        <div>
+                            <h4 style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Order Items:</h4>
+                            {selectedOrder.order_items?.map((item, index) => (
+                                <div key={index} style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    padding: '8px 0',
+                                    borderBottom: '1px solid var(--border)'
+                                }}>
+                                    <span>{item.menuitems?.name || 'Unknown Item'}</span>
+                                    <span>
+                                        {item.quantity}x ${item.menuitems?.price || 'N/A'} = ${(item.quantity * (item.menuitems?.price || 0)).toFixed(2)}
+                                    </span>
+                                </div>
+                            )) || <p>No items found</p>}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 
