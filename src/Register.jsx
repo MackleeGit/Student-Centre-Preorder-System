@@ -35,14 +35,14 @@ const Register = () => {
 
         try {
             await registerUser({ role, email, password, extraFields });
-           
+
             const shouldLogin = await showConfirmToast(
                 `Registration successful as ${role}! Click OK to login.`,
                 "Registration Complete"
             );
             
             if (shouldLogin) {
-                await loginUser({ email, password, role, navigate });
+                await loginUser({ unameemail:email, password, role, navigate });
             }
             
         } catch (error) {

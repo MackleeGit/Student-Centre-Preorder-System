@@ -33,13 +33,13 @@ export const registerUser = async ({ role, email, password, extraFields }) => {
       if (error) throw error;
     } else if (role === "vendor") {
       const { error } = await supabase.from("vendors").insert({
-        id: userId,
+        vendorid: userId,
         name: extraFields.vendorName,
         email,
 
         /*Do this soon*/
         image_url: "Remember to add this",
-
+        phone: "07vendornumber",
 
         date_joined: new Date().toISOString().split("T")[0],
         approval_status: "pending"
@@ -47,6 +47,7 @@ export const registerUser = async ({ role, email, password, extraFields }) => {
       if (error) throw error;
     }
   } catch (dbError) {
+    console.log(dbError)
     //Rollback auth user here if DB insert fails
 
   }
@@ -82,8 +83,8 @@ export const loginUser = async ({ unameemail, password, role, navigate }) => {
         if (error || !student) throw new Error("Student number not found");
         validEmail = student.email;
       }
-    } 
-    
+    }
+
     else if (role === "vendor") {
       const { data: vendor, error } = await supabase
         .from("vendors")
