@@ -6,7 +6,7 @@ import {
   FileText,
   LogOut,
 } from "lucide-react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "../css/sidebar.css";
 
 const Sidebar = ({ active, setActiveView }) => {
@@ -25,45 +25,45 @@ const Sidebar = ({ active, setActiveView }) => {
       </div>
       <nav className="sidebar-nav">
         <ul>
-          <li>
-            <NavLink
-              to="/admin/dashboard"
-              className={({ isActive }) => (isActive ? "active" : "")}
-              onClick={() => setActiveView("dashboard")}
-            >
-              <BarChart3 className="sidebar-icon" />
-              Dashboard
-            </NavLink>
+          <li
+            className={active === "dashboard" ? "active" : ""}
+            onClick={() => setActiveView("dashboard")}
+            tabIndex={0}
+            role="button"
+            aria-pressed={active === "dashboard"}
+          >
+            <BarChart3 className="sidebar-icon" />
+            Dashboard
           </li>
-          <li>
-            <NavLink
-              to="/admin/vendors"
-              className={({ isActive }) => (isActive ? "active" : "")}
-              onClick={() => setActiveView("vendors")}
-            >
-              <UtensilsCrossed className="sidebar-icon" />
-              Vendor Management
-            </NavLink>
+          <li
+            className={active === "vendors" ? "active" : ""}
+            onClick={() => setActiveView("vendors")}
+            tabIndex={0}
+            role="button"
+            aria-pressed={active === "vendors"}
+          >
+            <UtensilsCrossed className="sidebar-icon" />
+            Vendor Management
           </li>
-          <li>
-            <NavLink
-              to="/admin/students"
-              className={({ isActive }) => (isActive ? "active" : "")}
-              onClick={() => setActiveView("students")}
-            >
-              <Users className="sidebar-icon" />
-              Student Management
-            </NavLink>
+          <li
+            className={active === "students" ? "active" : ""}
+            onClick={() => setActiveView("students")}
+            tabIndex={0}
+            role="button"
+            aria-pressed={active === "students"}
+          >
+            <Users className="sidebar-icon" />
+            Student Management
           </li>
-          <li>
-            <NavLink
-              to="/admin/reports"
-              className={({ isActive }) => (isActive ? "active" : "")}
-              onClick={() => setActiveView("reports")}
-            >
-              <FileText className="sidebar-icon" />
-              Reports & Analytics
-            </NavLink>
+          <li
+            className={active === "reports" ? "active" : ""}
+            onClick={() => setActiveView("reports")}
+            tabIndex={0}
+            role="button"
+            aria-pressed={active === "reports"}
+          >
+            <FileText className="sidebar-icon" />
+            Reports & Analytics
           </li>
         </ul>
       </nav>
