@@ -15,6 +15,7 @@ import './css/global.css';
 import { Toaster } from 'react-hot-toast';
 import ViewAnalytics from "./Vendor/ViewAnalytics";
 import VendorProfile from "./Vendor/VendorProfile";
+import AdminStudentManagement from "./Admin/StudentManagement";
 
 
 function App() {
@@ -42,6 +43,8 @@ function App() {
         <Route path="/student/vieworders" element={<ViewOrders />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/vendor/viewmenu" element={<ViewMenu />} />
+
+        <Route path="/admin/studentmanagement" element={<AdminStudentManagement />} />
         <Route path="/vendor/viewanalytics" element={<ViewAnalytics />} />
         <Route path="/vendor/vendorprofile" element={<VendorProfile />} />
         <Route path="/vendor/dashboard" element={<VendorDashboard />} />

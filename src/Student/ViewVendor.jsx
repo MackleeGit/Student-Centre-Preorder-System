@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Star, ShoppingCart, Plus, Minus, Search, Clock } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient.js";
+import "../css/otherdashboard.css";
 import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast/toastUtils.jsx";
 import RatingDisplay from "../components/rating/RatingDisplay.jsx";
-
+import { checkAuth } from "../utils/authUtils.js";
 
 const ViewVendor = () => {
     const { vendorid } = useParams();
@@ -24,12 +25,43 @@ const ViewVendor = () => {
     const [timeSlots, setTimeSlots] = useState([]);
     const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
     const [busyTimeSlots, setBusyTimeSlots] = useState([]);
+    const [studentNumber, setStudentNumber] = useState(null);
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
     useEffect(() => {
+        checkAuth(navigate);
+        fetchStudentInfo();
         fetchVendorData();
         fetchTimeSlots();
         fetchBusyTimeSlots();
     }, [vendorid]);
+
+    const fetchStudentInfo = async () => {
+        try {
+            const { data: user, error: authError } = await supabase.auth.getUser();
+            if (authError || !user?.user?.email) {
+                navigate("/login");
+                return;
+            }
+
+            const { data: student, error: studentError } = await supabase
+                .from("students")
+                .select("student_number")
+                .eq("email", user.user.email)
+                .single();
+
+            if (studentError || !student) {
+                console.error("Student not found", studentError);
+                navigate("/login");
+                return;
+            }
+
+            setStudentNumber(student.student_number);
+        } catch (error) {
+            console.error('Error fetching student info:', error);
+            navigate("/login");
+        }
+    };
 
     const fetchVendorData = async () => {
         try {
@@ -42,7 +74,6 @@ const ViewVendor = () => {
 
             if (vendorError) throw vendorError;
             setVendor(vendorData);
-
 
             if (vendorData?.availability === 'open') {
                 // Fetch menu items
@@ -105,13 +136,11 @@ const ViewVendor = () => {
 
             if (error) throw error;
 
-            // Count occurrences of each timeslotid
             const timeslotCounts = {};
             data.forEach(order => {
                 timeslotCounts[order.timeslotid] = (timeslotCounts[order.timeslotid] || 0) + 1;
             });
 
-            // Find timeslots with more than one order
             const busySlots = Object.keys(timeslotCounts).filter(
                 timeslotid => timeslotCounts[timeslotid] > 1
             );
@@ -128,7 +157,6 @@ const ViewVendor = () => {
         const [hours, minutes] = timeslottime.split(':');
         slotTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-        // Check if slot is in the past or less than 1 hour from now
         const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
         return slotTime < oneHourFromNow;
     };
@@ -196,6 +224,109 @@ const ViewVendor = () => {
             setNewOrder(prev => [...prev, { ...item, quantity: 1 }]);
         }
         showSuccessToast(`${item.name} added to order`);
+    };
+
+    const createOrderInDatabase = async (orderData) => {
+        try {
+            // Generate UUID for order
+            const orderId = crypto.randomUUID();
+            
+            // Calculate total price
+            const totalPrice = newOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+            // Create order record
+            const { data: orderResult, error: orderError } = await supabase
+                .from('orders')
+                .insert({
+                    orderid: orderId,
+                    student_number: studentNumber,
+                    vendorid: vendorid,
+                    order_status: 'pending',
+                    created_at: new Date().toISOString(),
+                    timeslotid: selectedTimeSlot,
+                    price: totalPrice
+                })
+                .select()
+                .single();
+
+            if (orderError) throw orderError;
+
+            // Create order items
+            const orderItems = newOrder.map(item => ({
+                orderitemid: crypto.randomUUID(),
+                orderid: orderId,
+                menuitemid: item.menuitemid,
+                quantity: item.quantity
+            }));
+
+            const { error: itemsError } = await supabase
+                .from('order_items')
+                .insert(orderItems);
+
+            if (itemsError) throw itemsError;
+
+            return orderResult;
+        } catch (error) {
+            console.error('Error creating order:', error);
+            throw error;
+        }
+    };
+
+    const initiateSTKPush = async () => {
+        if (!studentNumber) {
+            showErrorToast('Student information not found');
+            return;
+        }
+
+        const confirmed = await showConfirmToast(
+            `Confirm payment of $${orderTotal.toFixed(2)} for your order?`,
+            'Confirm Payment'
+        );
+        
+        if (!confirmed) return;
+
+        setIsProcessingPayment(true);
+
+        try {
+            const orderTotal = newOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            const response = await fetch("/.netlify/functions/stkPush", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    phoneNumber: "254708374149", // Test phone number
+                    amount: Math.ceil(orderTotal) // Round up to nearest whole number
+                })
+            });
+
+            const data = await response.json();
+            
+            if (response.ok && data.response) {
+                showSuccessToast('Payment initiated successfully! Check your phone for M-Pesa prompt.');
+                
+                // Create order in database
+                await createOrderInDatabase();
+                
+                showSuccessToast('Order created successfully!');
+                
+                // Reset order state
+                setNewOrder([]);
+                setSelectedTimeSlot("");
+                setShowOrderWizard(false);
+                
+                // Navigate back to dashboard
+                navigate('/student/dashboard');
+            } else {
+                throw new Error(data.message || 'Payment initiation failed');
+            }
+        } catch (error) {
+            console.error("Payment error:", error);
+            showErrorToast(`Payment failed: ${error.message}`);
+        } finally {
+            setIsProcessingPayment(false);
+        }
     };
 
     const filteredMenuItems = menuItems.filter(item =>
@@ -392,14 +523,14 @@ const ViewVendor = () => {
                 )}
 
                 {activeTab === "order" && (
-                    vendor?.availability === 'closed' ? (<div style={{ textAlign: "center", padding: "var(--spacing-8)", color: "var(--muted-foreground)" }}>
-                        <Clock size={64} style={{ margin: "0 auto var(--spacing-4)", opacity: 0.5 }} />
-                        <h3 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "var(--spacing-2)" }}>
-                            Vendor Currently Unavailable
-                        </h3>
-                        <p>This vendor is currently closed. Please try again later when they're open.</p>
-                    </div>
-
+                    vendor?.availability === 'closed' ? (
+                        <div style={{ textAlign: "center", padding: "var(--spacing-8)", color: "var(--muted-foreground)" }}>
+                            <Clock size={64} style={{ margin: "0 auto var(--spacing-4)", opacity: 0.5 }} />
+                            <h3 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "var(--spacing-2)" }}>
+                                Vendor Currently Unavailable
+                            </h3>
+                            <p>This vendor is currently closed. Please try again later when they're open.</p>
+                        </div>
                     ) : (
                         <div className="card">
                             <div className="card-header">
@@ -420,9 +551,6 @@ const ViewVendor = () => {
                             </div>
                         </div>
                     )
-
-
-
                 )}
             </div>
 
@@ -618,14 +746,15 @@ const ViewVendor = () => {
 
                                                 <button
                                                     className="btn btn-primary"
+                                                    onClick={initiateSTKPush}
                                                     style={{
                                                         width: "100%",
-                                                        opacity: canProceedToCheckout ? 1 : 0.5,
-                                                        cursor: canProceedToCheckout ? "pointer" : "not-allowed"
+                                                        opacity: canProceedToCheckout && !isProcessingPayment ? 1 : 0.5,
+                                                        cursor: canProceedToCheckout && !isProcessingPayment ? "pointer" : "not-allowed"
                                                     }}
-                                                    disabled={!canProceedToCheckout}
+                                                    disabled={!canProceedToCheckout || isProcessingPayment}
                                                 >
-                                                    Proceed to Checkout
+                                                    {isProcessingPayment ? 'Processing Payment...' : 'Proceed to Checkout'}
                                                 </button>
                                             </div>
                                         </div>
