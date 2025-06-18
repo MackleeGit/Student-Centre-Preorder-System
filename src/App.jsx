@@ -1,26 +1,23 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, BrowserRouter } from "react-router-dom";
 import Login from "./Login";
 import Index from "./Index";
 import Register from "./Register";
 import StudentDashboard from "./Student/Dashboard";
-import ViewVendor from "./Student/ViewVendor";
-import ViewOrders from "./Student/ViewOrders";
-
-
 import VendorDashboard from "./Vendor/Dashboard";
-import ViewMenu from "./Vendor/ViewMenu";
-import AdminDashboard from "./Admin/Dashboard";
-import AdminLogin from './Admin/Login';
+import AdminLogin from './Admin/Login.jsx';
+import AdminDashboard from './Admin/Dashboard.jsx';
+import AdminStudentManagement from "./Admin/StudentManagement";
 import './css/global.css';
 import { Toaster } from 'react-hot-toast';
-import ViewAnalytics from "./Vendor/ViewAnalytics";
-import VendorProfile from "./Vendor/VendorProfile";
-
 
 function App() {
   return (
+
+      
+
     <BrowserRouter>
-      {/* Toast container */}
+    
+    {/* Toast container */}
       <Toaster
         position="top-right"
         toastOptions={{
@@ -32,21 +29,16 @@ function App() {
           },
         }}
       />
-
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/student/dashboard" element={<StudentDashboard />} />
-        <Route path="/student/viewvendor/:vendorid" element={<ViewVendor />} />
-        <Route path="/student/vieworders" element={<ViewOrders />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/vendor/viewmenu" element={<ViewMenu />} />
-        <Route path="/vendor/viewanalytics" element={<ViewAnalytics />} />
-        <Route path="/vendor/vendorprofile" element={<VendorProfile />} />
-        <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+        <Route path="/vendor/dashboard" element= {<VendorDashboard />} />
         <Route path="/admin" element={<Index />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+         <Route path="/admin/StudentManagement" element={<AdminStudentManagement />} />
       </Routes>
     </BrowserRouter>
   );
