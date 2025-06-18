@@ -39,7 +39,46 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
+/* --- Professional Data Table Styling --- */
 
+/* This is the main container for your table */
+.data-table {
+  width: 100%;                  /* Make the table take up the full width of its container */
+  border-collapse: collapse;    /* This makes the borders clean and single-lined */
+  margin-top: var(--spacing-4); /* Add some space above the table */
+  font-size: 0.9rem;            /* A slightly smaller font size often looks more professional */
+}
+
+/* Styling for the table header (the titles) */
+.data-table th {
+  border: 1px solid #e2e8f0;   /* Adds the column lines (a light gray border) */
+  padding: 12px 15px;           /* ADDS MORE SPACE: Increases padding for less congestion */
+  text-align: left;             /* Aligns header text to the left, which is standard */
+  background-color: #f8fafc;  /* A very light gray background for the header */
+  font-weight: 600;             /* Makes the header text bold */
+  color: #475569;               /* A softer black for the text */
+}
+
+/* Styling for the table data cells (the student info) */
+.data-table td {
+  border: 1px solid #e2e8f0;   /* Adds the row and column lines */
+  padding: 12px 15px;           /* ADDS MORE SPACE: Matches the header padding */
+}
+
+/* Styling for the table rows */
+.data-table tbody tr {
+  border-bottom: 1px solid #e2e8f0; /* Ensures a line under each row */
+}
+
+/* Add a subtle hover effect to make the table interactive */
+.data-table tbody tr:hover {
+  background-color: #f1f5f9; /* A light background color when you hover over a row */
+}
+
+/* Specific styling for the actions button to give it space */
+.data-table td .btn {
+  margin: 0;
+}
 
 
 
@@ -686,3 +725,55 @@ body {
   border-radius: 4px;
 }
 
+/* Styling for the actions cell and dropdown menu */
+.actions-cell {
+  position: relative;
+  text-align: center;
+}
+
+.actions-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  width: 120px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.actions-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.actions-dropdown button:hover {
+  background-color: #f8fafc;
+}
+
+.actions-dropdown button.delete {
+  color: #ef4444; /* Red color for delete action */
+}
+
+.actions-dropdown button.delete:hover {
+  background-color: #fee2e2;
+}
+
+.input-edit {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+}
