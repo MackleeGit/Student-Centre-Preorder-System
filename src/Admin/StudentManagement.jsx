@@ -189,7 +189,7 @@ const StudentManagement = () => {
                                 
                                         <td style={{ textAlign: 'center' }} className="actions-cell">
                                             <button 
-                                                className="btn btn-sm btn-outline btn-icon" 
+                                                className="btn btn-sm btn-primary btn-icon" 
                                                 title="Manage Student"
                                                 // Toggle the menu based on the student_number
                                                 onClick={() => setOpenMenuId(student.student_number === openMenuId ? null : student.student_number)}

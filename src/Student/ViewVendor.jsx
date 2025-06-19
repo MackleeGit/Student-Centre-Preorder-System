@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Star, ShoppingCart, Plus, Minus, Search, Clock } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient.js";
-import "../css/otherdashboard.css";
+import "../css/dashboard.css";
 import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast/toastUtils.jsx";
 import RatingDisplay from "../components/rating/RatingDisplay.jsx";
 import { checkAuth } from "../utils/authUtils.js";

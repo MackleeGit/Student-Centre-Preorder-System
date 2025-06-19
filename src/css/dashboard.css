@@ -38,20 +38,6 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 * {
   margin: 0;
   padding: 0;
@@ -112,9 +98,215 @@ body {
   grid-template-columns: repeat(3, 1fr);
 }
 
+/* Admin layout specific */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-container main {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* Mobile hamburger button */
+.mobile-menu-btn {
+  display: none;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  padding: var(--spacing-2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  position: fixed;
+  top: var(--spacing-4);
+  left: var(--spacing-4);
+  z-index: 1001;
+}
+
+/* Data table styles */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--spacing-4);
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--spacing-3);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  font-weight: 600;
+  background: var(--muted);
+}
+
+.data-table tr:hover {
+  background: var(--accent);
+}
+
+/* Actions dropdown */
+.actions-cell {
+  position: relative;
+}
+
+.actions-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  min-width: 120px;
+}
+
+.actions-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.actions-dropdown button:hover {
+  background: var(--accent);
+}
+
+.actions-dropdown button.delete {
+  color: var(--destructive);
+}
+
+/* Input edit styles */
+.input-edit {
+  width: 100%;
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.btn-success {
+  background: #10b981;
+  color: white;
+  margin-right: var(--spacing-2);
+}
+
 @media (max-width: 768px) {
   .grid-2, .grid-3 {
     grid-template-columns: 1fr;
+  }
+  
+  .container {
+    padding: 0 var(--spacing-3);
+  }
+  
+  /* Mobile layout adjustments */
+  .app-container {
+    flex-direction: column;
+  }
+  
+  .app-container main {
+    padding: var(--spacing-4) var(--spacing-3);
+    margin-left: 0;
+  }
+  
+  .mobile-menu-btn {
+    display: block;
+  }
+  
+  /* Header adjustments */
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+    padding-left: 60px; /* Space for hamburger button */
+  }
+  
+  .header h1 {
+    font-size: 1.25rem;
+  }
+  
+  /* Card adjustments */
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+  }
+  
+  .card-header .input-with-icon {
+    max-width: 100% !important;
+  }
+  
+  /* Table responsiveness */
+  .data-table {
+    font-size: 0.875rem;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: var(--spacing-2);
+  }
+  
+  .data-table th:nth-child(n+3),
+  .data-table td:nth-child(n+3) {
+    display: none;
+  }
+  
+  .data-table th:last-child,
+  .data-table td:last-child {
+    display: table-cell;
+  }
+  
+  /* Stack table content vertically on very small screens */
+  @media (max-width: 480px) {
+    .data-table,
+    .data-table thead,
+    .data-table tbody,
+    .data-table th,
+    .data-table td,
+    .data-table tr {
+      display: block;
+    }
+    
+    .data-table thead tr {
+      position: absolute;
+      top: -9999px;
+      left: -9999px;
+    }
+    
+    .data-table tr {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: var(--spacing-3);
+      padding: var(--spacing-3);
+    }
+    
+    .data-table td {
+      border: none;
+      position: relative;
+      padding-left: 50%;
+      padding-bottom: var(--spacing-2);
+    }
+    
+    .data-table td:before {
+      content: attr(data-label);
+      position: absolute;
+      left: 6px;
+      width: 45%;
+      padding-right: 10px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
   }
 }
 
@@ -129,6 +321,9 @@ body {
 
 .card-header {
   margin-bottom: var(--spacing-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .card-title {
@@ -274,68 +469,24 @@ body {
   color: white;
 }
 
+.badge-destructive {
+  background: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
 /* Header styles */
 .header {
   border-bottom: 1px solid var(--border);
   background: var(--card);
   padding: var(--spacing-4) 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .header-title {
   font-size: 1.5rem;
   font-weight: 700;
-}
-
-/* Notification dropdown */
-.notification-dropdown {
-  position: relative;
-}
-
-.notification-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  width: 320px;
-  max-height: 400px;
-  overflow-y: auto;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  z-index: 50;
-  margin-top: var(--spacing-2);
-}
-
-.notification-item {
-  padding: var(--spacing-3);
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-}
-
-.notification-item:hover {
-  background: var(--muted);
-}
-
-
-.notification-item:last-child {
-  border-bottom: none;
-}
-
-.notification-title {
-  font-weight: 600;
-  font-size: 0.875rem;
-  margin-bottom: var(--spacing-1);
-}
-
-
-.notification-content {
-  flex: 1;
-}
-
-
-.notification-time {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
 }
 
 /* Search results */
@@ -428,46 +579,6 @@ body {
   gap: var(--spacing-2);
 }
 
-/* Responsive utilities */
-@media (max-width: 768px) {
-   .header .container {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .header-title {
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .header .flex {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .container {
-    padding: 0 var(--spacing-3);
-  }
-  
- 
-  
-  .notification-menu {
-    width: 280px;
-  }
-  
-  .order-item, .vendor-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-3);
-  }
-  
-  .vendor-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-}
-
 /* Welcome section */
 .welcome-section {
   display: flex;
@@ -501,5 +612,16 @@ body {
   .welcome-text, .active-orders-box {
     flex: none;
     width: 100%;
+  }
+  
+  .order-item, .vendor-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+  }
+  
+  .vendor-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 }

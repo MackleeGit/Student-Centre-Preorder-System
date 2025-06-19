@@ -9,17 +9,19 @@ import {
 import { useNavigate } from "react-router-dom";
 import "../css/sidebar.css";
 
-const Sidebar = ({ active, setActiveView }) => {
+const Sidebar = ({ active, setActiveView, isOpen, onClose }) => {
   const navigate = useNavigate();
 
-  // Handle logout click
   const handleLogout = () => {
-    // You can extend this to call logout functions and cleanup
     navigate("/admin/login");
   };
 
+  const handleItemClick = (view) => {
+    setActiveView(view);
+  };
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <h2>STC Preorder System</h2>
       </div>
@@ -27,7 +29,7 @@ const Sidebar = ({ active, setActiveView }) => {
         <ul>
           <li
             className={active === "dashboard" ? "active" : ""}
-            onClick={() => setActiveView("dashboard")}
+            onClick={() => handleItemClick("dashboard")}
             tabIndex={0}
             role="button"
             aria-pressed={active === "dashboard"}
@@ -37,7 +39,7 @@ const Sidebar = ({ active, setActiveView }) => {
           </li>
           <li
             className={active === "vendors" ? "active" : ""}
-            onClick={() => setActiveView("vendors")}
+            onClick={() => handleItemClick("vendors")}
             tabIndex={0}
             role="button"
             aria-pressed={active === "vendors"}
@@ -47,7 +49,7 @@ const Sidebar = ({ active, setActiveView }) => {
           </li>
           <li
             className={active === "students" ? "active" : ""}
-            onClick={() => setActiveView("students")}
+            onClick={() => handleItemClick("students")}
             tabIndex={0}
             role="button"
             aria-pressed={active === "students"}
@@ -57,7 +59,7 @@ const Sidebar = ({ active, setActiveView }) => {
           </li>
           <li
             className={active === "reports" ? "active" : ""}
-            onClick={() => setActiveView("reports")}
+            onClick={() => handleItemClick("reports")}
             tabIndex={0}
             role="button"
             aria-pressed={active === "reports"}
