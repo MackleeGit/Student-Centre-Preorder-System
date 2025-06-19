@@ -230,7 +230,7 @@ const ViewVendor = () => {
         try {
             // Generate UUID for order
             const orderId = crypto.randomUUID();
-            
+
             // Calculate total price
             const totalPrice = newOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -244,7 +244,7 @@ const ViewVendor = () => {
                     order_status: 'pending',
                     created_at: new Date().toISOString(),
                     timeslotid: selectedTimeSlot,
-                    price: totalPrice
+                    total: totalPrice
                 })
                 .select()
                 .single();
@@ -278,18 +278,19 @@ const ViewVendor = () => {
             return;
         }
 
+        const orderTotal = newOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const confirmed = await showConfirmToast(
             `Confirm payment of $${orderTotal.toFixed(2)} for your order?`,
             'Confirm Payment'
         );
-        
+
         if (!confirmed) return;
 
         setIsProcessingPayment(true);
-
+        console.log("🧮 Order total before STK:", orderTotal);
         try {
-            const orderTotal = newOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            
+
+
             const response = await fetch("/.netlify/functions/stkPush", {
                 method: "POST",
                 headers: {
@@ -302,20 +303,20 @@ const ViewVendor = () => {
             });
 
             const data = await response.json();
-            
+
             if (response.ok && data.response) {
                 showSuccessToast('Payment initiated successfully! Check your phone for M-Pesa prompt.');
-                
+
                 // Create order in database
                 await createOrderInDatabase();
-                
+
                 showSuccessToast('Order created successfully!');
-                
+
                 // Reset order state
                 setNewOrder([]);
                 setSelectedTimeSlot("");
                 setShowOrderWizard(false);
-                
+
                 // Navigate back to dashboard
                 navigate('/student/dashboard');
             } else {
