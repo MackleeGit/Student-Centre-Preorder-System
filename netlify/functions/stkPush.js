@@ -9,7 +9,7 @@ export async function handler(event) {
     const shortcode = process.env.DARAJA_SHORTCODE;
     const passkey = process.env.DARAJA_PASSKEY;
     const callbackURL = process.env.DARAJA_CALLBACK_URL;
-    
+
 
     // Step 1: Get access token
     const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
@@ -46,7 +46,8 @@ export async function handler(event) {
       },
       {
         headers: {
-          Authorization: `Bearer ${accessToken}`
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
         }
       }
     );
@@ -60,12 +61,13 @@ export async function handler(event) {
       })
     };
   } catch (error) {
-    console.error("STK Push Error:", error);
+    console.error("STK Push Error:", error.response?.data || error.message);
     return {
       statusCode: 500,
       body: JSON.stringify({
         success: false,
-        message: error.message || "STK Push failed"
+        message: error.response?.data?.errorMessage || error.message || "STK Push failed",
+        details: error.response?.data || null
       })
     };
   }
