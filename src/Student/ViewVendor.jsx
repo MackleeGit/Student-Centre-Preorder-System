@@ -248,6 +248,7 @@ const ViewVendor = () => {
         if (orderError) throw orderError;
 
         const orderId = orderResult.orderid; // 👈 This is your SERIAL integer ID
+        console.log(orderId)
 
         // Insert order items referencing the new orderid
         const orderItems = newOrder.map(item => ({
