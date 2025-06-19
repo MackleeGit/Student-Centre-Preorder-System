@@ -226,51 +226,48 @@ const ViewVendor = () => {
         showSuccessToast(`${item.name} added to order`);
     };
 
-    const createOrderInDatabase = async (orderData) => {
-        try {
-            // Generate UUID for order
-            const orderId = crypto.randomUUID();
+   const createOrderInDatabase = async (orderData) => {
+    try {
+        // Calculate total price
+        const totalPrice = newOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-            // Calculate total price
-            const totalPrice = newOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        // Insert order and get generated orderid
+        const { data: orderResult, error: orderError } = await supabase
+            .from('orders')
+            .insert({
+                student_number: studentNumber,
+                vendorid: vendorid,
+                order_status: 'pending',
+                created_at: new Date().toISOString(),
+                timeslotid: selectedTimeSlot,
+                total: totalPrice
+            })
+            .select()
+            .single();
 
-            // Create order record
-            const { data: orderResult, error: orderError } = await supabase
-                .from('orders')
-                .insert({
-                    orderid: orderId,
-                    student_number: studentNumber,
-                    vendorid: vendorid,
-                    order_status: 'pending',
-                    created_at: new Date().toISOString(),
-                    timeslotid: selectedTimeSlot,
-                    total: totalPrice
-                })
-                .select()
-                .single();
+        if (orderError) throw orderError;
 
-            if (orderError) throw orderError;
+        const orderId = orderResult.orderid; // 👈 This is your SERIAL integer ID
 
-            // Create order items
-            const orderItems = newOrder.map(item => ({
-                orderitemid: crypto.randomUUID(),
-                orderid: orderId,
-                menuitemid: item.menuitemid,
-                quantity: item.quantity
-            }));
+        // Insert order items referencing the new orderid
+        const orderItems = newOrder.map(item => ({
+            orderid: orderId, // 👈 Correctly referencing the new order
+            menuitemid: item.menuitemid,
+            quantity: item.quantity
+        }));
 
-            const { error: itemsError } = await supabase
-                .from('order_items')
-                .insert(orderItems);
+        const { error: itemsError } = await supabase
+            .from('order_items')
+            .insert(orderItems);
 
-            if (itemsError) throw itemsError;
+        if (itemsError) throw itemsError;
 
-            return orderResult;
-        } catch (error) {
-            console.error('Error creating order:', error);
-            throw error;
-        }
-    };
+        return orderResult;
+    } catch (error) {
+        console.error('Error creating order:', error);
+        throw error;
+    }
+};
 
     const initiateSTKPush = async () => {
         if (!studentNumber) {
