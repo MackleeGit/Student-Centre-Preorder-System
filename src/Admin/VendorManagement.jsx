@@ -1,151 +1,229 @@
-import React, { useEffect, useState } from "react";
-import { FilePenLine, Ban } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "../utils/supabaseClient.js";
+import { Search, MoreVertical, Edit, Trash2, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { showConfirmToast, showErrorToast, showSuccessToast } from '../components/Toast/toastUtils.jsx';
 import "../css/dashboard.css";
 
-const VendorManagement = () => {
-  const [vendors, setVendors] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchVendors = async () => {
-      const { data, error } = await supabase
-        .from("vendors")
-        .select("id, name, contact_email, status");
-      if (error) {
-        console.error("Error fetching vendors:", error);
-      } else {
-        setVendors(data);
-      }
-      setLoading(false);
-    };
-    fetchVendors();
-  }, []);
-
-  const handleEdit = (id) => {
-    // TODO: Implement edit vendor modal or page navigation
-    alert(`Edit vendor with ID ${id}`);
-  };
-
-  const handleSuspend = async (id) => {
-    if (!window.confirm("Are you sure you want to suspend this vendor?")) return;
-    try {
-      const { error } = await supabase
-        .from("vendors")
-        .update({ status: "Suspended" })
-        .eq("id", id);
-      if (error) throw error;
-
-      setVendors((prev) =>
-        prev.map((v) => (v.id === id ? { ...v, status: "Suspended" } : v))
-      );
-    } catch (error) {
-      console.error("Error suspending vendor:", error);
-      alert("Failed to suspend vendor");
+// --- Helper Components ---
+const StatusBadge = ({ status }) => {
+    switch (status) {
+        case 'approved':
+            return <span className="badge badge-success"><CheckCircle2 size={14} /> Approved</span>;
+        case 'pending':
+            return <span className="badge badge-warning"><Clock size={14} /> Pending</span>;
+        case 'rejected':
+            return <span className="badge badge-danger"><XCircle size={14} /> Rejected</span>;
+        default:
+            return <span className="badge-neutral">{status || 'N/A'}</span>;
     }
-  };
-
-  return (
-    <div>
-      <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center"}}>
-        <h2>Vendor Management</h2>
-        <button className="btn btn-primary" onClick={() => alert("Add new vendor - implement!")}>
-          + Add New Vendor
-        </button>
-      </div>
-
-      <div className="card" style={{ marginTop: 16, overflowX: "auto" }}>
-        {loading ? (
-          <p>Loading vendors...</p>
-        ) : vendors.length === 0 ? (
-          <p>No vendors found.</p>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Vendor Name</th>
-                <th style={thStyle}>Contact Email</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vendors.map((vendor) => (
-                <tr key={vendor.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                  <td style={tdStyle}>{vendor.name}</td>
-                  <td style={tdStyle}>{vendor.contact_email}</td>
-                  <td style={tdStyle}>
-                    <StatusTag status={vendor.status} />
-                  </td>
-                  <td style={{ ...tdStyle, minWidth: 120 }}>
-                    <button
-                      onClick={() => handleEdit(vendor.id)}
-                      className="btn btn-ghost"
-                      title="Edit vendor"
-                      style={{ marginRight: 8 }}
-                      aria-label={`Edit vendor ${vendor.name}`}
-                    >
-                      <FilePenLine />
-                    </button>
-                    {vendor.status !== "Suspended" && (
-                      <button
-                        onClick={() => handleSuspend(vendor.id)}
-                        className="btn btn-ghost badge-destructive"
-                        title="Suspend vendor"
-                        aria-label={`Suspend vendor ${vendor.name}`}
-                      >
-                        <Ban />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
 };
 
-const thStyle = {
-  textAlign: "left",
-  padding: "12px 8px",
-  borderBottom: "2px solid var(--border)",
-  fontWeight: 600,
-  whiteSpace: "nowrap",
+const AvailabilityBadge = ({ isAvailable }) => {
+    return isAvailable === 'open' ? 
+        <span className="badge badge-success">Open</span> : 
+        <span className="badge badge-danger">Closed</span>;
 };
 
-const tdStyle = {
-  padding: "12px 8px",
-  whiteSpace: "nowrap",
-  verticalAlign: "middle",
-};
 
-const StatusTag = ({ status }) => {
-  const lower = status?.toLowerCase() || "";
-  const isActive = lower === "active";
-  const isSuspended = lower === "suspended";
+// --- Main Component ---
+const VendorManagement = () => {
+    const [vendors, setVendors] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [error, setError] = useState(null);
 
-  return (
-    <span
-      style={{
-        padding: "4px 10px",
-        borderRadius: "9999px",
-        backgroundColor: isActive ? "#10B981" : isSuspended ? "#EF4444" : "#9CA3AF",
-        color: "white",
-        fontWeight: 600,
-        fontSize: "0.875rem",
-        display: "inline-block",
-        minWidth: 70,
-        textAlign: "center",
-        userSelect: "none",
-      }}
-      aria-label={`Status: ${status}`}
-    >
-      {status}
-    </span>
-  );
+    const [openMenuId, setOpenMenuId] = useState(null);
+    const [editingVendor, setEditingVendor] = useState(null);
+    const menuRef = useRef(null);
+
+    // --- Main Data Fetching Function ---
+    const fetchVendors = async () => {
+        // CHANGE 1: Removed 'image_url' from the select query
+        const { data, error } = await supabase
+            .from("vendors")
+            .select("vendorid, name, approval_status, email, availability, phone, total_sales, cancellation_rate")
+            
+
+        if (error) {
+            console.error("Error fetching vendors:", error);
+            setError("Could not load vendor data. Please check RLS policies.");
+        } else {
+            setVendors(data);
+        }
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        setLoading(true);
+        fetchVendors();
+    }, []);
+
+    // --- Close dropdown menu if clicking outside ---
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setOpenMenuId(null);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // --- CRUD Functions ---
+    const handleDeleteVendor = async (vendorId, vendorName) => {
+        setOpenMenuId(null);
+        const confirmed = await showConfirmToast(`Delete vendor: ${vendorName}? This is permanent.`);
+        
+        if (confirmed) {
+            const { error } = await supabase.from('vendors').delete().eq('vendorid', vendorId);
+            if (error) {
+                showErrorToast("Failed to delete vendor.");
+            } else {
+                showSuccessToast("Vendor successfully deleted.");
+                fetchVendors();
+            }
+        }
+    };
+
+    const handleUpdateVendor = async () => {
+        const { vendorid, ...updateData } = editingVendor;
+        const { error } = await supabase
+            .from('vendors')
+            .update({
+                name: updateData.name,
+                email: updateData.email,
+                phone: updateData.phone,
+                approval_status: updateData.approval_status,
+                availability: updateData.availability,
+                // CHANGE 2: Removed image_url from the update object
+            })
+            .eq('vendorid', vendorid);
+
+        if (error) {
+            showErrorToast("Failed to update vendor.");
+        } else {
+            showSuccessToast("Vendor updated successfully.");
+            setEditingVendor(null);
+            fetchVendors();
+        }
+    };
+
+    const handleApproveVendor = async (vendorId) => {
+        const { error } = await supabase.from('vendors').update({ approval_status: 'approved' }).eq('vendorid', vendorId);
+        if (error) {
+            showErrorToast("Failed to approve vendor.");
+        } else {
+            showSuccessToast("Vendor approved successfully.");
+            fetchVendors();
+        }
+    };
+
+    // --- Event Handlers ---
+    const startEditing = (vendor) => {
+        setOpenMenuId(null);
+        setEditingVendor({ ...vendor });
+    };
+
+    const cancelEditing = () => setEditingVendor(null);
+
+    const onEditChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        const newValue = type === 'checkbox' ? (checked ? 'open' : 'closed') : value;
+        setEditingVendor({ ...editingVendor, [name]: newValue });
+    };
+
+    // --- Filtering and Rendering ---
+    const filteredVendors = vendors.filter(vendor =>
+        Object.values(vendor).some(val => 
+            String(val).toLowerCase().includes(searchTerm.toLowerCase())
+        )
+    );
+
+    const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
+
+    if (loading) return <div className="loading-spinner">Loading vendor data...</div>;
+    if (error) return <div className="error-message">{error}</div>;
+
+    return (
+        <div className="card">
+            <div className="card-header">
+                <h3 className="card-title">Vendor Management</h3>
+                <div className="input-with-icon" style={{ maxWidth: "300px" }}>
+                    <Search className="input-icon" size={16} />
+                    <input type="text" placeholder="Search vendors..." className="input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                </div>
+            </div>
+            <div className="card-content">
+                <table className="data-table">
+                    <thead>
+                        <tr>
+                            {/* CHANGE 3: Removed 'Profile Photo' from the header */}
+                            <th>Name</th>
+                            <th>Approval Status</th>
+                            <th>Availability</th>
+                            <th>Email</th>
+                            <th>Date Joined</th>
+                            <th style={{ textAlign: 'center' }}>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredVendors.map((vendor) => (
+                            <tr key={vendor.vendorid}>
+                                {editingVendor?.vendorid === vendor.vendorid ? (
+                                    <>
+                                        {/* Inline Editing Mode */}
+                                        <td><input type="text" name="name" value={editingVendor.name || ''} onChange={onEditChange} className="input-edit" /></td>
+                                        <td>
+                                            <select name="approval_status" value={editingVendor.approval_status || 'pending'} onChange={onEditChange} className="input-edit">
+                                                <option value="approved">Approved</option>
+                                                <option value="pending">Pending</option>
+                                                <option value="rejected">Rejected</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <label className="switch">
+                                                <input type="checkbox" name="availability" checked={editingVendor.availability === 'open'} onChange={onEditChange} />
+                                                <span className="slider"></span>
+                                            </label>
+                                        </td>
+                                        <td><input type="email" name="email" value={editingVendor.email || ''} onChange={onEditChange} className="input-edit" /></td>
+                                        <td>{formatDate(vendor.created_at)}</td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <button onClick={handleUpdateVendor} className="btn btn-sm btn-success">Save</button>
+                                            <button onClick={cancelEditing} className="btn btn-sm btn-secondary">Cancel</button>
+                                        </td>
+                                    </>
+                                ) : (
+                                    <>
+                                        {/* Normal Display Mode */}
+                                        <td>{vendor.name}</td>
+                                        <td><StatusBadge status={vendor.approval_status} /></td>
+                                        <td><AvailabilityBadge isAvailable={vendor.availability} /></td>
+                                        <td>{vendor.email}</td>
+                                        <td>{formatDate(vendor.created_at)}</td>
+                                        <td style={{ textAlign: 'center' }} className="actions-cell">
+                                            <button className="btn btn-sm btn-outline btn-icon" title="Manage Vendor" onClick={() => setOpenMenuId(vendor.vendorid === openMenuId ? null : vendor.vendorid)}>
+                                                <MoreVertical size={16} />
+                                            </button>
+                                            {openMenuId === vendor.vendorid && (
+                                                <div className="actions-dropdown" ref={menuRef}>
+                                                    <button onClick={() => startEditing(vendor)}><Edit size={14} /> Edit Details</button>
+                                                    {vendor.approval_status !== 'approved' && (
+                                                        <button onClick={() => handleApproveVendor(vendor.vendorid)} className="approve"><CheckCircle2 size={14} /> Approve</button>
+                                                    )}
+                                                    <button onClick={() => handleDeleteVendor(vendor.vendorid, vendor.name)} className="delete"><Trash2 size={14} /> Delete</button>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 };
 
 export default VendorManagement;
