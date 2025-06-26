@@ -1,272 +1,192 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../utils/supabaseClient.js";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { Download, Info } from 'lucide-react';
 import "../css/dashboard.css";
 
-const convertArrayToCSV = (arr, columns) => {
-  const header = columns.map((col) => col.header).join(",");
-  const rows = arr.map((item) =>
-    columns
-      .map((col) => {
-        const val =
-          typeof col.accessor === "function" ? col.accessor(item) : item[col.accessor];
-        if (val == null) return "";
-        const escaped = `${val}`.replace(/"/g, '""');
-        return `"${escaped}"`;
-      })
-      .join(",")
-  );
-  return [header, ...rows].join("\r\n");
-};
-
-const downloadCSV = (filename, csvString) => {
-  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", filename);
-  link.click();
-  URL.revokeObjectURL(url);
-};
-
-const ReportsAnalytics = () => {
-  const [vendors, setVendors] = useState([]);
-  const [selectedVendor, setSelectedVendor] = useState("");
-  const [dateRange, setDateRange] = useState({ from: "", to: "" });
-  const [popularItems, setPopularItems] = useState([]);
-  const [vendorLeaderboard, setVendorLeaderboard] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchVendors = async () => {
-      const { data, error } = await supabase.from("vendors").select("id, name");
-      if (!error) {
-        setVendors(data);
-      } else {
-        console.error("Failed to fetch vendors:", error);
-      }
-    };
-    fetchVendors();
-  }, []);
-
-  useEffect(() => {
-    if (!selectedVendor || !dateRange.from || !dateRange.to) {
-      setPopularItems([]);
-      setVendorLeaderboard([]);
-      return;
-    }
-
-    const fetchReports = async () => {
-      setLoading(true);
-
-      const popularQuery = supabase
-        .from("menu_items")
-        .select("name, vendor(name), total_orders")
-        .eq("vendor_id", selectedVendor)
-        .gte("order_date", dateRange.from)
-        .lte("order_date", dateRange.to)
-        .order("total_orders", { ascending: false })
-        .limit(5);
-
-      const leaderboardQuery = supabase
-        .from("vendors")
-        .select("name, total_sales, avg_completion_time")
-        .eq("id", selectedVendor);
-
-      try {
-        const [
-          { data: popularData, error: popularError },
-          { data: leaderboardData, error: leaderboardError },
-        ] = await Promise.all([popularQuery, leaderboardQuery]);
-
-        if (popularError) throw popularError;
-        if (leaderboardError) throw leaderboardError;
-
-        setPopularItems(popularData);
-        setVendorLeaderboard(leaderboardData);
-      } catch (err) {
-        console.error("Failed fetching reports:", err.message);
-        setPopularItems([]);
-        setVendorLeaderboard([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReports();
-  }, [selectedVendor, dateRange]);
-
-  const handleVendorChange = (e) => {
-    setSelectedVendor(e.target.value);
-  };
-
-  const handleDateChange = (e) => {
-    setDateRange({ ...dateRange, [e.target.name]: e.target.value });
-  };
-
-  const handleExport = () => {
-    if (!selectedVendor) {
-      alert("Please select a vendor before exporting reports.");
-      return;
-    }
-    const popularItemsColumns = [
-      { header: "Item Name", accessor: "name" },
-      { header: "Vendor", accessor: (row) => row.vendor?.name || "" },
-      { header: "Total Orders", accessor: "total_orders" },
-    ];
-
-    const vendorLeaderboardColumns = [
-      { header: "Vendor Name", accessor: "name" },
-      { header: "Total Sales (Ksh)", accessor: "total_sales" },
-      { header: "Avg. Completion Time", accessor: "avg_completion_time" },
-    ];
-
-    const popularItemsCSV = convertArrayToCSV(popularItems, popularItemsColumns);
-    const vendorLeaderboardCSV = convertArrayToCSV(vendorLeaderboard, vendorLeaderboardColumns);
-
-    const combinedCSV =
-      "Top 5 Most Popular Menu Items\r\n" +
-      popularItemsCSV +
-      "\r\n\r\nVendor Leaderboard\r\n" +
-      vendorLeaderboardCSV;
-
-    downloadCSV("STC_Preorder_Reports.csv", combinedCSV);
-  };
-
-  return (
-    <div>
-      <div
-        className="card-header"
-        style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
-        <h2>Analytics & Reports</h2>
-      </div>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-          <select
-            aria-label="Select Vendor"
-            value={selectedVendor}
-            onChange={handleVendorChange}
-            className="input"
-            style={{ flex: 1, minWidth: 200 }}
-          >
-            <option value="">Select Vendor</option>
-            {vendors.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="date"
-            name="from"
-            value={dateRange.from}
-            onChange={handleDateChange}
-            className="input"
-            style={{ flex: 1, minWidth: 160 }}
-            aria-label="From Date"
-          />
-          <input
-            type="date"
-            name="to"
-            value={dateRange.to}
-            onChange={handleDateChange}
-            className="input"
-            style={{ flex: 1, minWidth: 160 }}
-            aria-label="To Date"
-          />
-          <button onClick={handleExport} className="btn btn-primary" style={{ flexShrink: 0 }}>
-            Export All Reports (CSV)
-          </button>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 24, overflowX: "auto" }}>
-        <h3>Top 5 Most Popular Menu Items</h3>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Item Name</th>
-              <th style={thStyle}>Vendor</th>
-              <th style={thStyle}>Total Orders</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={3} style={tdStyle}>
-                  Loading...
-                </td>
-              </tr>
-            ) : popularItems.length === 0 ? (
-              <tr>
-                <td colSpan={3} style={tdStyle}>
-                  No data available.
-                </td>
-              </tr>
-            ) : (
-              popularItems.map((item, index) => (
-                <tr key={index}>
-                  <td style={tdStyle}>{item.name}</td>
-                  <td style={tdStyle}>{item.vendor?.name || "N/A"}</td>
-                  <td style={tdStyle}>{item.total_orders}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="card" style={{ marginBottom: 24, overflowX: "auto" }}>
-        <h3>Vendor Leaderboard</h3>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Vendor Name</th>
-              <th style={thStyle}>Total Sales (Ksh)</th>
-              <th style={thStyle}>Avg. Completion Time (mins)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={3} style={tdStyle}>
-                  Loading...
-                </td>
-              </tr>
-            ) : vendorLeaderboard.length === 0 ? (
-              <tr>
-                <td colSpan={3} style={tdStyle}>
-                  No data available.
-                </td>
-              </tr>
-            ) : (
-              vendorLeaderboard.map((vendor, index) => (
-                <tr key={index}>
-                  <td style={tdStyle}>{vendor.name}</td>
-                  <td style={tdStyle}>{vendor.total_sales}</td>
-                  <td style={tdStyle}>{vendor.avg_completion_time}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+// --- New Helper Component for Empty States ---
+const NoDataPlaceholder = ({ message }) => (
+    <div className="no-data-placeholder">
+        <Info size={24} />
+        <p>{message}</p>
     </div>
-  );
-};
+);
 
-const thStyle = {
-  textAlign: "left",
-  padding: "12px 8px",
-  borderBottom: "2px solid var(--border)",
-  fontWeight: 600,
-  whiteSpace: "nowrap",
-};
 
-const tdStyle = {
-  padding: "12px 8px",
-  whiteSpace: "nowrap",
-  verticalAlign: "middle",
+// --- Main Reports Component ---
+const ReportsAnalytics = () => {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const [dateRange, setDateRange] = useState({
+        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+        end: new Date().toISOString().split('T')[0],
+    });
+
+    const [salesRevenue, setSalesRevenue] = useState([]);
+    const [topVendors, setTopVendors] = useState([]);
+    const [popularItems, setPopularItems] = useState([]);
+    const [orderStatus, setOrderStatus] = useState([]);
+
+    const fetchAllReportData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+            const [
+                { data: salesData, error: salesError },
+                { data: topVendorsData, error: topVendorsError },
+                { data: popularItemsData, error: popularItemsError },
+                { data: orderStatusData, error: orderStatusError },
+            ] = await Promise.all([
+                supabase.rpc('get_daily_revenue', { start_date: dateRange.start, end_date: dateRange.end }),
+                supabase.rpc('get_top_vendors', { start_date: dateRange.start, end_date: dateRange.end }),
+                supabase.rpc('get_most_popular_items', { start_date: dateRange.start, end_date: dateRange.end }),
+                supabase.rpc('get_order_status_distribution', { start_date: dateRange.start, end_date: dateRange.end })
+            ]);
+
+            if (salesError || topVendorsError || popularItemsError || orderStatusError) {
+                throw new Error("One or more report queries failed.");
+            }
+
+            setSalesRevenue(salesData || []);
+            setTopVendors(topVendorsData || []);
+            setPopularItems(popularItemsData || []);
+            
+            const formattedStatusData = (orderStatusData || []).map(item => ({
+                name: item.status,
+                value: Number(item.status_count)
+            }));
+            setOrderStatus(formattedStatusData);
+
+        } catch (err) {
+            console.error("Error fetching report data:", err);
+            setError("Failed to load reports. Please check database functions and RLS policies.");
+        } finally {
+            setLoading(false);
+        }
+    }, [dateRange]);
+
+    useEffect(() => {
+        fetchAllReportData();
+    }, [fetchAllReportData]);
+
+    const handleDateChange = (e) => {
+        setDateRange({ ...dateRange, [e.target.name]: e.target.value });
+    };
+    
+    if (loading) return <div className="loading-spinner">Generating Reports...</div>;
+    if (error) return <div className="error-message">{error}</div>;
+
+    const PIE_COLORS = ['#4CAF50', '#FFC107', '#F44336', '#9E9E9E', '#2196F3'];
+
+    return (
+        <>
+            <div className="card-header">
+                <h3 className="card-title">Reports & Analytics</h3>
+                <div className="filters-container">
+                    <label>
+                        Show data for:
+                        <select value={dateRange.start} onChange={(e) => {
+                            const days = Number(e.target.value);
+                            const start = new Date(new Date().setDate(new Date().getDate() - days)).toISOString().split('T')[0];
+                            const end = new Date().toISOString().split('T')[0];
+                            setDateRange({ start, end });
+                        }} className="input">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </label>
+                    <button className="btn btn-outline btn-sm">
+                        <Download size={14} /> Export to CSV
+                    </button>
+                </div>
+            </div>
+
+            <div className="card-content">
+                {/* --- Charts Section --- */}
+                <div className="grid grid-2 gap-4" style={{ marginTop: '24px' }}>
+                    <div className="chart-card">
+                        <h4 className="chart-title">Total Revenue Per Day (Ksh)</h4>
+                        {salesRevenue.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <LineChart data={salesRevenue}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="date" />
+                                    <YAxis tickFormatter={(value) => `Ksh ${value/1000}k`} />
+                                    <Tooltip formatter={(value) => `Ksh ${Number(value).toLocaleString()}`} />
+                                    <Legend />
+                                    <Line type="monotone" dataKey="total_revenue" stroke="#1d4ed8" strokeWidth={2} name="Revenue" />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <NoDataPlaceholder message="No sales data for this period." />
+                        )}
+                    </div>
+                    <div className="chart-card">
+                         <h4 className="chart-title">Order Status Distribution</h4>
+                        {orderStatus.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <PieChart>
+                                    <Pie data={orderStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+                                        {orderStatus.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <NoDataPlaceholder message="No order status data for this period." />
+                        )}
+                    </div>
+                </div>
+                
+                {/* --- Tables Section --- */}
+                <div className="grid grid-2 gap-4" style={{ marginTop: '24px' }}>
+                    <div className="table-card">
+                        <h4 className="chart-title">Top 5 Vendors by Sales</h4>
+                        <table className="data-table">
+                            <thead>
+                                <tr><th>Vendor Name</th><th>Total Sales (Ksh)</th></tr>
+                            </thead>
+                            <tbody>
+                                {topVendors.length > 0 ? topVendors.map(vendor => (
+                                    <tr key={vendor.name}>
+                                        <td>{vendor.name}</td>
+                                        <td>{Number(vendor.total_sales).toLocaleString()}</td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan="2"><NoDataPlaceholder message="No vendor sales data." /></td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="table-card">
+                        <h4 className="chart-title">Top 10 Most Popular Items</h4>
+                        <table className="data-table">
+                             <thead>
+                                <tr><th>Item</th><th>Vendor</th><th>Total Orders</th></tr>
+                            </thead>
+                            <tbody>
+                                {popularItems.length > 0 ? popularItems.map(item => (
+                                    <tr key={`${item.name}-${item.vendor_name}`}>
+                                        <td>{item.name}</td>
+                                        <td>{item.vendor_name}</td>
+                                        <td>{item.total_orders}</td>
+                                    </tr>
+                                )) : (
+                                     <tr><td colSpan="3"><NoDataPlaceholder message="No popular items data." /></td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
 };
 
 export default ReportsAnalytics;

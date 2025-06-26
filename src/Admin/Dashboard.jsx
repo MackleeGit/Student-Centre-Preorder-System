@@ -1,209 +1,115 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Menu } from "lucide-react";
+import { Menu, Users, UtensilsCrossed, BarChart3, Wallet, ShoppingCart, Store } from "lucide-react";
 import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
 import { supabase } from "../utils/supabaseClient.js";
+
+// --- Import all your child components ---
 import Sidebar from "./Sidebar";
 import StudentManagement from './StudentManagement.jsx';
-import {
-    LineChartComponent,
-    BarChartComponent,
-    DonutChartComponent,
-} from "../components/Charts"; // Import your chart components
+import VendorManagement from './VendorManagement.jsx';
+import ReportsAnalytics from './ReportsAnalytics.jsx';
+
 import "../css/dashboard.css";
 
-// --- Placeholder Components (can be moved to separate files later) ---
 
-const VendorManagement = () => (
-    <div className="card">
-        <div className="card-header"><h3 className="card-title">Vendor Management</h3></div>
-        <div className="card-content"><p>Vendor management table and tools will be displayed here.</p></div>
-    </div>
-);
+// --- Main Dashboard Overview Component ---
+// This new component will neatly contain all the logic and UI for the main dashboard view.
+const DashboardOverview = () => {
+    const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState({ totalSales: 0, totalOrders: 0, activeVendors: 0 });
 
-const ReportsAnalytics = () => (
-    <div className="card">
-        <div className="card-header"><h3 className="card-title">Reports & Analytics</h3></div>
-        <div className="card-content"><p>Charts and downloadable reports will be displayed here.</p></div>
-    </div>
-);
+    useEffect(() => {
+        const fetchDashboardMetrics = async () => {
+            setLoading(true);
+            const today = new Date().toISOString().split("T")[0];
 
-// --- Main Admin Dashboard Component ---
+            // --- Corrected Data Fetching Logic ---
+            try {
+                // Fetch sales for today
+                const { data: salesData, error: salesError } = await supabase
+                    .from("vendor_daily_sales")
+                    .select("total_sales")
+                    .eq("sales_date", today);
 
+                if (salesError) throw salesError;
+                
+                // Calculate total sales
+                const totalSales = salesData ? salesData.reduce((acc, sale) => acc + (sale.total_sales || 0), 0) : 0;
+
+                // Fetch other stats
+                const { count: orderCount, error: orderError } = await supabase.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', today);
+                if(orderError) throw orderError;
+
+                const { count: vendorCount, error: vendorError } = await supabase.from('vendors').select('*', { count: 'exact', head: true }).eq('availability', 'open');
+                if(vendorError) throw vendorError;
+
+                setStats({
+                    totalSales: totalSales,
+                    totalOrders: orderCount || 0,
+                    activeVendors: vendorCount || 0,
+                });
+
+            } catch (error) {
+                console.error("Error fetching dashboard metrics:", error);
+                setStats({ totalSales: 0, totalOrders: 0, activeVendors: 0 });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardMetrics();
+    }, []);
+
+    if (loading) {
+        return <div className="loading-spinner">Loading Dashboard Stats...</div>;
+    }
+
+    return (
+        <>
+            <div className="card-header">
+                <h3 className="card-title">Dashboard Overview</h3>
+            </div>
+            <div className="card-content">
+                <div className="grid grid-3 gap-4">
+                    <div className="card stat-card">
+                        <Wallet className="stat-icon" size={24} />
+                        <div className="stat-value">Ksh {stats.totalSales.toLocaleString()}</div>
+                        <div className="stat-label">Today's Sales</div>
+                    </div>
+                    <div className="card stat-card">
+                        <ShoppingCart className="stat-icon" size={24} />
+                        <div className="stat-value">{stats.totalOrders}</div>
+                        <div className="stat-label">Today's Orders</div>
+                    </div>
+                    <div className="card stat-card">
+                        <Store className="stat-icon" size={24} />
+                        <div className="stat-value">{stats.activeVendors}</div>
+                        <div className="stat-label">Active Vendors</div>
+                    </div>
+                </div>
+                 {/* You can add your chart components here later */}
+            </div>
+        </>
+    );
+};
+
+
+// --- Main Admin Layout Component ---
 const AdminDashboard = () => {
     const navigate = useNavigate();
-    const [userData, setUserData] = useState(null);
     const [loadingUser, setLoadingUser] = useState(true);
     const [activeView, setActiveView] = useState("dashboard");
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-
-    // Data states
-    const [salesData, setSalesData] = useState(0);
-    const [ordersData, setOrdersData] = useState(0);
-    const [activeVendors, setActiveVendors] = useState(0);
-    const [avgFulfillmentTime, setAvgFulfillmentTime] = useState(0);
-    const [liveOrders, setLiveOrders] = useState([]);
-    const [highCancellationVendors, setHighCancellationVendors] = useState([]);
-    const [systemAlerts, setSystemAlerts] = useState([]);
-    const [ordersPerHour, setOrdersPerHour] = useState([]);
-    const [topVendors, setTopVendors] = useState([]);
-    const [orderStatusDistribution, setOrderStatusDistribution] = useState({});
-
     useEffect(() => {
+        // This useEffect now only handles security and basic user info.
         checkAuth(navigate);
         checkUserRole("admin", navigate);
-
-        const fetchData = async () => {
-            setLoadingUser(true);
-            const { data: user, error } = await supabase.auth.getUser();
-            if (error || !user?.user?.email) {
-                navigate("/admin/login");
-                return;
-            }
-            setUserData(user.user);
-            await fetchDashboardMetrics();
-            await fetchLiveOrders();
-            await fetchHighCancellationVendors();
-            await fetchSystemAlerts();
-            await fetchOrdersPerHour();
-            await fetchTopVendors();
-            await fetchOrderStatusDistribution();
-            setLoadingUser(false);
-        };
-
-        fetchData();
+        setLoadingUser(false);
     }, [navigate]);
 
-    const fetchDashboardMetrics = async () => {
-        try {
-            const { data: total_sales, error: salesError } = await supabase
-                .from("vendor_sales")
-                .select("total_sales")
-                .eq("date", new Date().toISOString().split("T")[0]);
-
-            const { data: orders, error: ordersError } = await supabase
-                .from("orders")
-                .select("*")
-                .eq("date", new Date().toISOString().split("T")[0]);
-
-            const { data: vendors, error: vendorsError } = await supabase
-                .from("vendors")
-                .select("*")
-                .eq("availability", "open");
-
-            const { data: fulfillmentTimes, error: fulfillmentError } = await supabase
-                .from("orders")
-                .select("fulfillment_time")
-                .eq("date", new Date().toISOString().split("T")[0]);
-
-            if (!salesError) setSalesData(total_sales.reduce((acc, curr) => acc + curr.amount, 0));
-            else setSalesData(0);
-            if (!ordersError) setOrdersData(orders.length);
-            else setOrdersData(0);
-            if (!vendorsError) setActiveVendors(vendors.length);
-            else setActiveVendors(0);
-            if (!fulfillmentError && fulfillmentTimes.length > 0) {
-                const avgTime =
-                    fulfillmentTimes.reduce((acc, curr) => acc + curr.fulfillment_time, 0) /
-                    fulfillmentTimes.length;
-                setAvgFulfillmentTime(avgTime);
-            } else setAvgFulfillmentTime(0);
-        } catch {
-            setSalesData(0);
-            setOrdersData(0);
-            setActiveVendors(0);
-            setAvgFulfillmentTime(0);
-        }
-    };
-
-    const fetchLiveOrders = async () => {
-        const { data, error } = await supabase
-            .from("orders")
-            .select("orderid, vendorid, order_status")
-            .order("created_at", { ascending: false })
-            .limit(10);
-
-        if (!error) setLiveOrders(data);
-        else setLiveOrders([]);
-    };
-
-    const fetchHighCancellationVendors = async () => {
-        const { data, error } = await supabase
-            .from("vendors")
-            .select("name, cancellation_rate")
-            .gt("cancellation_rate", 0.5);
-
-        if (!error) setHighCancellationVendors(data);
-        else setHighCancellationVendors([]);
-    };
-
-    const fetchSystemAlerts = async () => {
-        const { data, error } = await supabase.from("system_alerts").select("*");
-        if (!error) setSystemAlerts(data);
-        else setSystemAlerts([]);
-    };
-
-
-    const fetchOrdersPerHour = async () => {
-        // We now call the 'get_orders_per_hour' function we created in the database
-        const { data, error } = await supabase.rpc('get_orders_per_hour');
-
-        if (error) {
-            console.error("Error fetching orders per hour:", error);
-
-        } else {
-            setOrdersPerHour(data);
-        }
-    };
-
-    const fetchTopVendors = async () => {
-        const { data, error } = await supabase
-            .from("vendors")
-            .select("name, total_sales")
-            .order("total_sales", { ascending: false })
-            .limit(5);
-
-        if (!error) setTopVendors(data);
-        else setTopVendors([]);
-    };
-
-    const fetchOrderStatusDistribution = async () => {
-        // We also call the new function for status distribution
-        const { data, error } = await supabase.rpc('get_order_status_distribution');
-        if (error) {
-            console.error("Error fetching status distribution:", error);
-            setOrderStatusDistribution({});
-        } else {
-            const distribution = {};
-            data.forEach((item) => {
-                distribution[item.order_status] = item.status_count;
-            });
-            setOrderStatusDistribution(distribution);
-        }
-    };
-
-    const handleSuspendVendor = async (vendorId, currentAvailability) => {
-        // Determine the new availability
-        const newAvailability = currentAvailability === 'open' ? 'closed' : 'open';
-
-        const confirmed = await showConfirmToast(`Set this vendor to '${newAvailability}'?`);
-
-        if (confirmed) {
-            const { error } = await supabase
-                .from('vendors')
-                .update({ availability: newAvailability }) // <-- Make sure it updates 'availability'
-                .eq('id', vendorId);
-
-            if (error) {
-                console.error("Failed to update vendor availability:", error);
-            } else {
-                // Refresh your UI to show the change
-                setVendors(vendors.map(v => v.id === vendorId ? { ...v, availability: newAvailability } : v));
-            }
-        }
-    };
     const handleLogout = async () => {
         const confirmed = await showConfirmToast("Are you sure you want to log out?");
         if (confirmed) {
@@ -211,16 +117,14 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleSidebarItemClick = (view) => {
+        setActiveView(view);
+        setSidebarOpen(false);
+    };
+
+    // This function now correctly renders the appropriate component for each view.
     const renderActiveView = () => {
         switch (activeView) {
-            case "dashboard":
-                return (
-                    <div>
-                        <h2>Dashboard Overview</h2>
-                        <p>Welcome, {userData?.email || "Admin"}!</p>
-                        {/* Render KPI cards, charts, etc. */}
-                    </div>
-                );
             case "vendors":
                 return <VendorManagement />;
             case "students":
@@ -228,48 +132,22 @@ const AdminDashboard = () => {
             case "reports":
                 return <ReportsAnalytics />;
             default:
-                return (
-                    <div>
-                        <h2>Dashboard Overview</h2>
-                        <p>Welcome, {userData?.email || "Admin"}!</p>
-                    </div>
-                );
+                return <DashboardOverview />;
         }
     };
 
-
-
-
-    const handleSidebarToggle = () => {
-        setSidebarOpen(!sidebarOpen);
-    };
-
-    const handleSidebarItemClick = (view) => {
-        setActiveView(view);
-        setSidebarOpen(false); // Close sidebar on mobile after selection
-    };
-
-
-    if (loadingUser) return <p>Loading dashboard...</p>;
+    if (loadingUser) return <p>Loading...</p>;
 
     return (
         <div className="app-container" style={{ display: "flex", minHeight: "100vh" }}>
-            <button
-                className="mobile-menu-btn"
-                onClick={handleSidebarToggle}
-                aria-label="Toggle menu"
-            >
+            <button className="mobile-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle menu">
                 <Menu size={20} />
             </button>
 
-            {/* Sidebar overlay for mobile */}
-            <div
-                className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`}
-                onClick={() => setSidebarOpen(false)}
-            />
+            <div className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
             <Sidebar
-                active={activeView}
+                activeView={activeView}
                 setActiveView={handleSidebarItemClick}
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
@@ -277,14 +155,17 @@ const AdminDashboard = () => {
 
             <main style={{ flex: 1, padding: 24, overflowY: "auto" }}>
                 <header className="header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <h1>Admin Dashboard</h1>
+                    <h1>Admin Panel</h1>
                     <button className="btn btn-primary" onClick={handleLogout}>
                         Logout
                     </button>
                 </header>
 
                 <section style={{ marginTop: 24 }}>
-                    {renderActiveView()}
+                    {/* The outer .card div provides consistent styling for all views */}
+                    <div className="card">
+                        {renderActiveView()}
+                    </div>
                 </section>
             </main>
         </div>

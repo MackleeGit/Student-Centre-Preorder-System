@@ -629,3 +629,101 @@ body {
     justify-content: space-between;
   }
 }
+/* Vendor specific styles */
+.vendor-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 8px;
+    object-fit: cover;
+}
+
+.vendor-info {
+    display: flex;
+    align-items: center;
+}
+
+/* Status badges */
+.badge-success, .badge-warning, .badge-error, .badge-neutral {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.badge-success {
+    background-color: #e6f7e6;
+    color: #28a745;
+}
+
+.badge-warning {
+    background-color: #fff8e6;
+    color: #ffc107;
+}
+
+.badge-error {
+    background-color: #fde8e8;
+    color: #dc3545;
+}
+
+.badge-neutral {
+    background-color: #f0f0f0;
+    color: #6c757d;
+}
+
+/* Toggle switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 20px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #28a745;
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+/* Action buttons */
+.actions-dropdown .approve {
+    color: #28a745;
+}
+
+.actions-dropdown .approve:hover {
+    background-color: #e6f7e6;
+}

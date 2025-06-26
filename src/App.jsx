@@ -16,6 +16,8 @@ import { Toaster } from 'react-hot-toast';
 import ViewAnalytics from "./Vendor/ViewAnalytics";
 import VendorProfile from "./Vendor/VendorProfile";
 import AdminStudentManagement from "./Admin/StudentManagement";
+import AdminVendorManagement from './Admin/VendorManagement.jsx';
+import AdminReportsAnalytics from './Admin/ReportsAnalytics.jsx';
 
 
 function App() {
@@ -45,6 +47,8 @@ function App() {
         <Route path="/vendor/viewmenu" element={<ViewMenu />} />
 
         <Route path="/admin/studentmanagement" element={<AdminStudentManagement />} />
+        <Route path="/admin/vendormanagement" element={<AdminVendorManagement />} />
+        <Route path="/admin/ReportsAnalytics" element={<AdminReportsAnalytics />} />
         <Route path="/vendor/viewanalytics" element={<ViewAnalytics />} />
         <Route path="/vendor/vendorprofile" element={<VendorProfile />} />
         <Route path="/vendor/dashboard" element={<VendorDashboard />} />
