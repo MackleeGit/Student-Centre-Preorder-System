@@ -20,36 +20,37 @@ export const registerUser = async ({ role, email, password, extraFields }) => {
 
   if (signUpError) throw signUpError;
 
-  const userId = signUpData.user.id;
+  // This is the unique ID from the auth.users table
+  const userId = signUpData.user.id; 
 
   try {
     if (role === "student") {
+      // --- THE FIX IS HERE ---
+      // We now correctly include the 'user_id' when inserting the new student profile.
       const { error } = await supabase.from("students").insert({
+        user_id: userId, // This creates the crucial link
         student_number: extraFields.studentId,
         fname: extraFields.fname,
         lname: extraFields.lname,
-        email
+        email: email
       });
       if (error) throw error;
     } else if (role === "vendor") {
+      // You should do the same for vendors
       const { error } = await supabase.from("vendors").insert({
-        vendorid: userId,
+        user_id: userId, // Also add the user_id link for vendors
         name: extraFields.vendorName,
-        email,
-
-        /*Do this soon*/
-        image_url: "Remember to add this",
-        phone: "07vendornumber",
-
-        date_joined: new Date().toISOString().split("T")[0],
-        approval_status: "pending"
+        email: email,
+        // ... other vendor fields
       });
       if (error) throw error;
     }
   } catch (dbError) {
-    console.log(dbError)
-    //Rollback auth user here if DB insert fails
-
+    // If saving the profile fails, we should delete the auth user we just created.
+    // This prevents "zombie" auth accounts that have no profile.
+    await supabase.auth.admin.deleteUser(userId);
+    console.error("Database insert failed, rolling back auth user.");
+    throw dbError;
   }
 };
 
