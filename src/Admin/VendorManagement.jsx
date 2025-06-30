@@ -41,23 +41,14 @@ const VendorManagement = () => {
         // CHANGE 1: Removed 'image_url' from the select query
         const { data, error } = await supabase
             .from("vendors")
-<<<<<<< Updated upstream
-            .select("vendorid, name, approval_status, email, availability, phone, total_sales, cancellation_rate")
-            
-=======
             .select("vendorid, name, approval_status, email, availability, phone")
             .order('name', { ascending: true });
->>>>>>> Stashed changes
 
         if (error) {
             console.error("Error fetching vendors:", error);
             setError("Could not load vendor data. Please check RLS policies.");
         } else {
-<<<<<<< Updated upstream
-            setVendors(data);
-=======
             setVendors(data || []);
->>>>>>> Stashed changes
         }
         setLoading(false);
     };
@@ -96,27 +87,16 @@ const VendorManagement = () => {
 
     const handleUpdateVendor = async () => {
         const { vendorid, ...updateData } = editingVendor;
-<<<<<<< Updated upstream
-=======
         
         // CHANGE 2: Removed image_url from the update object
->>>>>>> Stashed changes
         const { error } = await supabase
             .from('vendors')
             .update({
                 name: updateData.name,
-<<<<<<< Updated upstream
-                email: updateData.email,
-                phone: updateData.phone,
-                approval_status: updateData.approval_status,
-                availability: updateData.availability,
-                // CHANGE 2: Removed image_url from the update object
-=======
                 phone: updateData.phone,
                 approval_status: updateData.approval_status,
                 availability: updateData.availability
                 // email is not updated here to protect login credentials
->>>>>>> Stashed changes
             })
             .eq('vendorid', vendorid);
 
@@ -153,33 +133,18 @@ const VendorManagement = () => {
         setEditingVendor({ ...editingVendor, [name]: newValue });
     };
 
-<<<<<<< Updated upstream
-    // --- Filtering and Rendering ---
-    const filteredVendors = vendors.filter(vendor =>
-        Object.values(vendor).some(val => 
-=======
     // --- Filtering Logic ---
     const filteredVendors = vendors.filter(vendor =>
         Object.values(vendor || {}).some(val => 
->>>>>>> Stashed changes
             String(val).toLowerCase().includes(searchTerm.toLowerCase())
         )
     );
 
-<<<<<<< Updated upstream
-    const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
-
-=======
->>>>>>> Stashed changes
     if (loading) return <div className="loading-spinner">Loading vendor data...</div>;
     if (error) return <div className="error-message">{error}</div>;
 
     return (
-<<<<<<< Updated upstream
-        <div className="card">
-=======
         <>
->>>>>>> Stashed changes
             <div className="card-header">
                 <h3 className="card-title">Vendor Management</h3>
                 <div className="input-with-icon" style={{ maxWidth: "300px" }}>
@@ -196,10 +161,6 @@ const VendorManagement = () => {
                             <th>Approval Status</th>
                             <th>Availability</th>
                             <th>Email</th>
-<<<<<<< Updated upstream
-                            <th>Date Joined</th>
-=======
->>>>>>> Stashed changes
                             <th style={{ textAlign: 'center' }}>Actions</th>
                         </tr>
                     </thead>
@@ -223,12 +184,7 @@ const VendorManagement = () => {
                                                 <span className="slider"></span>
                                             </label>
                                         </td>
-<<<<<<< Updated upstream
-                                        <td><input type="email" name="email" value={editingVendor.email || ''} onChange={onEditChange} className="input-edit" /></td>
-                                        <td>{formatDate(vendor.created_at)}</td>
-=======
                                         <td><input type="email" name="email" value={editingVendor.email || ''} className="input-edit" readOnly title="Login email cannot be changed."/></td>
->>>>>>> Stashed changes
                                         <td style={{ textAlign: 'center' }}>
                                             <button onClick={handleUpdateVendor} className="btn btn-sm btn-success">Save</button>
                                             <button onClick={cancelEditing} className="btn btn-sm btn-secondary">Cancel</button>
@@ -241,10 +197,6 @@ const VendorManagement = () => {
                                         <td><StatusBadge status={vendor.approval_status} /></td>
                                         <td><AvailabilityBadge isAvailable={vendor.availability} /></td>
                                         <td>{vendor.email}</td>
-<<<<<<< Updated upstream
-                                        <td>{formatDate(vendor.created_at)}</td>
-=======
->>>>>>> Stashed changes
                                         <td style={{ textAlign: 'center' }} className="actions-cell">
                                             <button className="btn btn-sm btn-outline btn-icon" title="Manage Vendor" onClick={() => setOpenMenuId(vendor.vendorid === openMenuId ? null : vendor.vendorid)}>
                                                 <MoreVertical size={16} />
@@ -266,11 +218,7 @@ const VendorManagement = () => {
                     </tbody>
                 </table>
             </div>
-<<<<<<< Updated upstream
-        </div>
-=======
         </>
->>>>>>> Stashed changes
     );
 };
 

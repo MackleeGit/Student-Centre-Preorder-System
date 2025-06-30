@@ -135,58 +135,6 @@ const StudentManagement = () => {
                         </tr>
                     </thead>
                     <tbody>
-<<<<<<< Updated upstream
-                    
-                        {filteredStudents.map((student) => (
-                            // Use the unique student_number for the key
-                            <tr key={student.student_number}>
-                                {editingStudent?.student_number === student.student_number ? (
-                                    <>
-                                        {/* Inline Editing Mode */}
-                                        <td><input type="text" name="student_number" value={editingStudent.student_number} onChange={onEditChange} className="input-edit" readOnly /></td>
-                                        <td><input type="text" name="fname" value={editingStudent.fname} onChange={onEditChange} className="input-edit" /></td>
-                                        <td><input type="text" name="lname" value={editingStudent.lname} onChange={onEditChange} className="input-edit" /></td>
-                                        <td><input type="email" name="email" value={editingStudent.email} onChange={onEditChange} className="input-edit" /></td>
-                                
-                                        <td style={{ textAlign: 'center' }}>
-                                            <button onClick={handleUpdateStudent} className="btn btn-sm btn-success">Save</button>
-                                            <button onClick={cancelEditing} className="btn btn-sm btn-secondary">Cancel</button>
-                                        </td>
-                                    </>
-                                ) : (
-                                    <>
-                                        {/* Normal Display Mode */}
-                                        <td>{student.student_number}</td>
-                                        <td>{student.fname}</td>
-                                        <td>{student.lname}</td>
-                                        <td>{student.email}</td> 
-                                
-                                        <td style={{ textAlign: 'center' }} className="actions-cell">
-                                            <button 
-                                                className="btn btn-sm btn-primary btn-icon" 
-                                                title="Manage Student"
-                                                // Toggle the menu based on the student_number
-                                                onClick={() => setOpenMenuId(student.student_number === openMenuId ? null : student.student_number)}
-                                            >
-                                                <UserCog size={16} />
-                                            </button>
-                                            {/* Show the menu if the openMenuId matches the student_number */}
-                                            {openMenuId === student.student_number && (
-                                                <div className="actions-dropdown" ref={menuRef}>
-                                                    <button onClick={() => startEditing(student)}>
-                                                        <Edit size={14} /> Update
-                                                    </button>
-                                                    <button onClick={() => handleDeleteStudent(student.student_number, `${student.fname} ${student.lname}`)} className="delete">
-                                                        <Trash2 size={14} /> Delete
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </td>
-                                    </>
-                                )}
-                            </tr>
-                        ))}
-=======
                         {filteredStudents.map((student) => {
                             if (!student) return null;
                             return (
@@ -225,7 +173,6 @@ const StudentManagement = () => {
                                 </tr>
                             );
                         })}
->>>>>>> Stashed changes
                     </tbody>
                 </table>
             </div>
