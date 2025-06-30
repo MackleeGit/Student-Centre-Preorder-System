@@ -3,7 +3,7 @@ import { Search, ShoppingCart, Bell, Clock } from "lucide-react";
 import "../css/dashboard.css";
 import { useNavigate } from "react-router-dom";
 import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
-import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
+import { showConfirmToast, showSuccessToast } from "../components/Toast/toastUtils.jsx";
 import { useRealtimeNotifications } from "../components/hooks/useRealtimeNotifications.jsx";
 import { useStudentOrders } from "../components/hooks/useStudentOrders.js";
 import { supabase } from "../utils/supabaseClient.js";
