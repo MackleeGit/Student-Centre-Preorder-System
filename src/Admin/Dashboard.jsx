@@ -1,19 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-<<<<<<< Updated upstream
-import { Menu, Users, UtensilsCrossed, BarChart3, Wallet, ShoppingCart, Store } from "lucide-react";
-=======
 import { Menu, Users, ShoppingCart, Store, Wallet } from "lucide-react";
->>>>>>> Stashed changes
 import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast } from "../components/Toast/toastUtils.jsx";
 import { supabase } from "../utils/supabaseClient.js";
 
-<<<<<<< Updated upstream
-// --- Import all your child components ---
-=======
 // --- Import all your child component files ---
->>>>>>> Stashed changes
 import Sidebar from "./Sidebar";
 import StudentManagement from './StudentManagement.jsx';
 import VendorManagement from './VendorManagement.jsx';
@@ -22,99 +14,6 @@ import ReportsAnalytics from './ReportsAnalytics.jsx';
 import "../css/dashboard.css";
 
 
-<<<<<<< Updated upstream
-// --- Main Dashboard Overview Component ---
-// This new component will neatly contain all the logic and UI for the main dashboard view.
-const DashboardOverview = () => {
-    const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ totalSales: 0, totalOrders: 0, activeVendors: 0 });
-
-    useEffect(() => {
-        const fetchDashboardMetrics = async () => {
-            setLoading(true);
-            const today = new Date().toISOString().split("T")[0];
-
-            // --- Corrected Data Fetching Logic ---
-            try {
-                // Fetch sales for today
-                const { data: salesData, error: salesError } = await supabase
-                    .from("vendor_daily_sales")
-                    .select("total_sales")
-                    .eq("sales_date", today);
-
-                if (salesError) throw salesError;
-                
-                // Calculate total sales
-                const totalSales = salesData ? salesData.reduce((acc, sale) => acc + (sale.total_sales || 0), 0) : 0;
-
-                // Fetch other stats
-                const { count: orderCount, error: orderError } = await supabase.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', today);
-                if(orderError) throw orderError;
-
-                const { count: vendorCount, error: vendorError } = await supabase.from('vendors').select('*', { count: 'exact', head: true }).eq('availability', 'open');
-                if(vendorError) throw vendorError;
-
-                setStats({
-                    totalSales: totalSales,
-                    totalOrders: orderCount || 0,
-                    activeVendors: vendorCount || 0,
-                });
-
-            } catch (error) {
-                console.error("Error fetching dashboard metrics:", error);
-                setStats({ totalSales: 0, totalOrders: 0, activeVendors: 0 });
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchDashboardMetrics();
-    }, []);
-
-    if (loading) {
-        return <div className="loading-spinner">Loading Dashboard Stats...</div>;
-    }
-
-    return (
-        <>
-            <div className="card-header">
-                <h3 className="card-title">Dashboard Overview</h3>
-            </div>
-            <div className="card-content">
-                <div className="grid grid-3 gap-4">
-                    <div className="card stat-card">
-                        <Wallet className="stat-icon" size={24} />
-                        <div className="stat-value">Ksh {stats.totalSales.toLocaleString()}</div>
-                        <div className="stat-label">Today's Sales</div>
-                    </div>
-                    <div className="card stat-card">
-                        <ShoppingCart className="stat-icon" size={24} />
-                        <div className="stat-value">{stats.totalOrders}</div>
-                        <div className="stat-label">Today's Orders</div>
-                    </div>
-                    <div className="card stat-card">
-                        <Store className="stat-icon" size={24} />
-                        <div className="stat-value">{stats.activeVendors}</div>
-                        <div className="stat-label">Active Vendors</div>
-                    </div>
-                </div>
-                 {/* You can add your chart components here later */}
-            </div>
-        </>
-    );
-};
-
-
-// --- Main Admin Layout Component ---
-const AdminDashboard = () => {
-    const navigate = useNavigate();
-    const [loadingUser, setLoadingUser] = useState(true);
-    const [activeView, setActiveView] = useState("dashboard");
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    useEffect(() => {
-        // This useEffect now only handles security and basic user info.
-=======
 // --- New, Self-Contained DashboardOverview Component ---
 // This component lives inside AdminDashboard.jsx and handles the main view.
 const DashboardOverview = () => {
@@ -202,7 +101,6 @@ const AdminDashboard = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
->>>>>>> Stashed changes
         checkAuth(navigate);
         checkUserRole("admin", navigate);
         setLoadingUser(false);
@@ -220,10 +118,6 @@ const AdminDashboard = () => {
         setSidebarOpen(false);
     };
 
-    const handleSidebarItemClick = (view) => {
-        setActiveView(view);
-        setSidebarOpen(false);
-    };
 
     // This function now correctly renders the appropriate component for each view.
     const renderActiveView = () => {
@@ -243,15 +137,11 @@ const AdminDashboard = () => {
 
     return (
         <div className="app-container" style={{ display: "flex", minHeight: "100vh" }}>
-<<<<<<< Updated upstream
-            <button className="mobile-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle menu">
-=======
             <button
                 className="mobile-menu-btn"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 aria-label="Toggle menu"
             >
->>>>>>> Stashed changes
                 <Menu size={20} />
             </button>
 
@@ -273,10 +163,6 @@ const AdminDashboard = () => {
                 </header>
 
                 <section style={{ marginTop: 24 }}>
-<<<<<<< Updated upstream
-                    {/* The outer .card div provides consistent styling for all views */}
-=======
->>>>>>> Stashed changes
                     <div className="card">
                         {renderActiveView()}
                     </div>
