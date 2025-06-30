@@ -16,8 +16,13 @@ import { Toaster } from 'react-hot-toast';
 import ViewAnalytics from "./Vendor/ViewAnalytics";
 import VendorProfile from "./Vendor/VendorProfile";
 import AdminStudentManagement from "./Admin/StudentManagement";
+<<<<<<< Updated upstream
 import AdminVendorManagement from './Admin/VendorManagement.jsx';
 import AdminReportsAnalytics from './Admin/ReportsAnalytics.jsx';
+=======
+import AdminVendorManagement from "./Admin/VendorManagement";
+import AdminReportsAnalytics from "./Admin/ReportsAnalytics";
+>>>>>>> Stashed changes
 
 
 function App() {
@@ -48,7 +53,10 @@ function App() {
 
         <Route path="/admin/studentmanagement" element={<AdminStudentManagement />} />
         <Route path="/admin/vendormanagement" element={<AdminVendorManagement />} />
+<<<<<<< Updated upstream
         <Route path="/admin/ReportsAnalytics" element={<AdminReportsAnalytics />} />
+=======
+        <Route path="/admin/reportsanalytics" element={<AdminReportsAnalytics />} />
         <Route path="/vendor/viewanalytics" element={<ViewAnalytics />} />
         <Route path="/vendor/vendorprofile" element={<VendorProfile />} />
         <Route path="/vendor/dashboard" element={<VendorDashboard />} />
