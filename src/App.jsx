@@ -16,8 +16,6 @@ import { Toaster } from 'react-hot-toast';
 import ViewAnalytics from "./Vendor/ViewAnalytics";
 import VendorProfile from "./Vendor/VendorProfile";
 import AdminStudentManagement from "./Admin/StudentManagement";
-import AdminVendorManagement from './Admin/VendorManagement.jsx';
-import AdminReportsAnalytics from './Admin/ReportsAnalytics.jsx';
 import AdminVendorManagement from "./Admin/VendorManagement";
 import AdminReportsAnalytics from "./Admin/ReportsAnalytics";
 
