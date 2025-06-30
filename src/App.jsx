@@ -53,9 +53,6 @@ function App() {
 
         <Route path="/admin/studentmanagement" element={<AdminStudentManagement />} />
         <Route path="/admin/vendormanagement" element={<AdminVendorManagement />} />
-<<<<<<< Updated upstream
-        <Route path="/admin/ReportsAnalytics" element={<AdminReportsAnalytics />} />
-=======
         <Route path="/admin/reportsanalytics" element={<AdminReportsAnalytics />} />
         <Route path="/vendor/viewanalytics" element={<ViewAnalytics />} />
         <Route path="/vendor/vendorprofile" element={<VendorProfile />} />
