@@ -96,7 +96,7 @@ const StudentDashboard = () => {
             if (document.visibilityState === 'visible') {
                 poll();
             }
-        }, 15000);
+        }, 5000);
 
         return () => clearInterval(intervalId);
     }, [UserData?.student_number]);

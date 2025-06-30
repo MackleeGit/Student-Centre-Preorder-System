@@ -131,7 +131,7 @@ const VendorDashboard = () => {
       if (document.visibilityState === 'visible') {
         poll();
       }
-    }, 15000);
+    }, 5000);
 
     return () => clearInterval(intervalId);
   }, [UserData?.vendorid]);
@@ -193,19 +193,67 @@ const VendorDashboard = () => {
 
 
   const updateOrderStatus = async (orderId, newStatus, extraFields = {}) => {
-    const { error } = await supabase
+    // First, get the order details to find the student_number
+    const { data: orderData, error: orderError } = await supabase
+      .from("orders")
+      .select("student_number, vendorid")
+      .eq("orderid", orderId)
+      .single();
+
+    if (orderError || !orderData) {
+      console.error(`❌ Failed to fetch order ${orderId}:`, orderError);
+      return false;
+    }
+
+    // Get the vendor name
+    const { data: vendorData, error: vendorError } = await supabase
+      .from("vendors")
+      .select("name")
+      .eq("vendorid", orderData.vendorid)
+      .single();
+
+    if (vendorError || !vendorData) {
+      console.error(`❌ Failed to fetch vendor ${orderData.vendorid}:`, vendorError);
+      return false;
+    }
+
+    // Update the order status
+    const { error: updateError } = await supabase
       .from("orders")
       .update({ order_status: newStatus, ...extraFields })
       .eq("orderid", orderId);
 
-    if (error) {
-      console.error(`❌ Failed to update order ${orderId} to "${newStatus}":`, error);
+    if (updateError) {
+      console.error(`❌ Failed to update order ${orderId} to "${newStatus}":`, updateError);
       return false;
     }
 
+    // Create notification for the student
+    const notificationMessage = `Your order from ${vendorData.name} has been updated to ${newStatus}`;
+    
+    const { error: notificationError } = await supabase
+      .from("notifications")
+      .insert({
+        notifid: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        sender: orderData.vendorid,
+        recipient: orderData.student_number,
+        message: notificationMessage,
+        read: false
+      });
+
+    if (notificationError) {
+      console.error(`❌ Failed to create notification for student ${orderData.student_number}:`, notificationError);
+      // Don't return false here since the order update was successful
+    }
+
+    console.log(`✅ Order ${orderId} updated to "${newStatus}" and notification sent to student ${orderData.student_number}`);
     return true;
   };
 
+
+
+   
 
   const handleAcceptOrder = async (orderId) => {
     const order = incomingOrders.find(o => o.orderid === orderId);
