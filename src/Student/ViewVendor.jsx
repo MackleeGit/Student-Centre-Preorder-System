@@ -3,6 +3,7 @@ import { ArrowLeft, Star, ShoppingCart, Plus, Minus, Search, Clock } from "lucid
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient.js";
 import "../css/dashboard.css";
+import "../css/responsive/student/viewVendor.css";
 import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast/toastUtils.jsx";
 import RatingDisplay from "../components/rating/RatingDisplay.jsx";
 import { checkAuth } from "../utils/authUtils.js";

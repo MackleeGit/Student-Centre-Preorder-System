@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Clock, CheckCircle, XCircle, Bell, Search, Package, DollarSign, TrendingUp, User } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import "../css/dashboard.css";
+
 import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast, showInfoToast, showSuccessToast } from "../components/Toast/toastUtils.jsx";
 import { useRealtimeNotifications } from "../components/hooks/useRealtimeNotifications.jsx";

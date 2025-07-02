@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import toast, { Toaster } from "react-hot-toast";
 import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast/toastUtils.jsx";
+import "../css/responsive/vendor/vendorDashboard.css";
 import { useNavigate } from "react-router-dom";
 
 // Minimal icon JSX (no shadcn, no lucide import)
