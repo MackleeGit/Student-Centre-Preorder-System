@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, ShoppingCart, Bell, Clock } from "lucide-react";
 import "../css/dashboard.css";
-import "../css/responsive/student/StudentDashboard.css";
+import "../css/responsive/student/studentDashboard.css";
 import { useNavigate } from "react-router-dom";
 import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast, showSuccessToast } from "../components/Toast/toastUtils.jsx";

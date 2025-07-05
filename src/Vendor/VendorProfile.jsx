@@ -272,7 +272,7 @@ const VendorProfilePage = () => {
                 </div>
 
                 <div>
-                  <label style={{ fontWeight: "500", marginBottom: "var(--spacing-2)", display: "block", display: "flex", alignItems: "center", gap: "var(--spacing-1)" }}>
+                  <label style={{ fontWeight: "500", marginBottom: "var(--spacing-2)", display: "flex", alignItems: "center", gap: "var(--spacing-1)" }}>
                     <Mail size={16} />
                     Email Address
                   </label>
@@ -282,7 +282,7 @@ const VendorProfilePage = () => {
                 </div>
 
                 <div>
-                  <label style={{ fontWeight: "500", marginBottom: "var(--spacing-2)", display: "block", display: "flex", alignItems: "center", gap: "var(--spacing-1)" }}>
+                  <label style={{ fontWeight: "500", marginBottom: "var(--spacing-2)", display: "flex", alignItems: "center", gap: "var(--spacing-1)" }}>
                     <Phone size={16} />
                     Phone Number
                   </label>
@@ -314,7 +314,7 @@ const VendorProfilePage = () => {
               <div style={{ display: "grid", gap: "var(--spacing-4)" }}>
           
                 <div>
-                  <label style={{ fontWeight: "500", marginBottom: "var(--spacing-2)", display: "block", display: "flex", alignItems: "center", gap: "var(--spacing-1)" }}>
+                  <label style={{ fontWeight: "500", marginBottom: "var(--spacing-2)",  display: "flex", alignItems: "center", gap: "var(--spacing-1)" }}>
                     <Clock size={16} />
                     Availability Status
                   </label>
