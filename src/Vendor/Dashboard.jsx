@@ -3,6 +3,7 @@ import { Clock, CheckCircle, XCircle, Bell, Search, Package, DollarSign, Trendin
 import { useNavigate, Link } from 'react-router-dom';
 import "../css/dashboard.css";
 
+
 import { checkAuth, logoutUser, checkUserRole } from "../utils/authUtils.js";
 import { showConfirmToast, showInfoToast, showSuccessToast } from "../components/Toast/toastUtils.jsx";
 import { useRealtimeNotifications } from "../components/hooks/useRealtimeNotifications.jsx";
@@ -420,7 +421,7 @@ const VendorDashboard = () => {
         {/* Welcome Section */}
         <div className="welcome-section">
           <div className="welcome-text">
-            <h2 className="welcome-title">Welcome back, {UserData.name}. For test purposes, your id is {UserData.vendorid}!</h2>
+            <h2 className="welcome-title">Welcome back, {UserData.name}</h2>
             <p style={{ color: 'var(--muted-foreground)' }}>
               Manage your orders and keep track of your business.
             </p>
