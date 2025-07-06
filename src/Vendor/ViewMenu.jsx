@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import toast, { Toaster } from "react-hot-toast";
@@ -6,10 +5,14 @@ import { showSuccessToast, showErrorToast, showConfirmToast } from "../component
 import "../css/responsive/vendor/vendorDashboard.css";
 import { useNavigate } from "react-router-dom";
 
-// Minimal icon JSX (no shadcn, no lucide import)
+// Icons
 const PencilIcon = () => (
-  <svg height="18" width="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>
+  <svg height="18" width="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+  </svg>
 );
+
 const TrashIcon = () => (
   <svg height="18" width="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3-3h8a2 2 0 0 1 2 2v0a2 2 0 0 1-2-2H7a2 2 0 0 1 2-2z" /></svg>
 );
@@ -45,7 +48,6 @@ export default function ViewMenu() {
 
   useEffect(() => {
     fetchVendor();
-    // eslint-disable-next-line
   }, []);
 
   const fetchVendor = async () => {
@@ -76,10 +78,8 @@ export default function ViewMenu() {
       fetchCategories();
       fetchIngredients();
     }
-    // eslint-disable-next-line
   }, [userData]);
 
-  // Get menuitems INCLUDING categories, ingredients
   const fetchMenu = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -121,6 +121,7 @@ export default function ViewMenu() {
     const { data, error } = await supabase.from("categories").select("*");
     setCategories(data || []);
   };
+
   const fetchIngredients = async () => {
     const { data, error } = await supabase.from("ingredients").select("*");
     setIngredients(data || []);
@@ -155,10 +156,10 @@ export default function ViewMenu() {
       prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
     );
   };
+
   const selectAll = () => setSelectedIds(menuItems.map(i => i.menuitemid));
   const clearSelection = () => setSelectedIds([]);
 
-  // -------- CREATE MENU ITEM --------
   const handleCreateForm = e => {
     setCreateForm(f => ({ ...f, [e.target.name]: e.target.value }));
   };
@@ -174,6 +175,7 @@ export default function ViewMenu() {
         : [...f[listName], val]
     }));
   };
+
   const saveCreate = async () => {
     if (!createForm.name || !createForm.price || isNaN(Number(createForm.price))) {
       showErrorToast("Name and valid price required.");
@@ -241,7 +243,6 @@ export default function ViewMenu() {
     }
   };
 
-  // -------- EDIT MENU ITEM --------
   const handleEditClick = (item) => {
     setEditForm({
       menuitemid: item.menuitemid,
@@ -256,6 +257,7 @@ export default function ViewMenu() {
     });
     setShowEdit(true);
   };
+
   const handleEditForm = e => {
     setEditForm(f => ({ ...f, [e.target.name]: e.target.value }));
   };
@@ -271,6 +273,7 @@ export default function ViewMenu() {
         : [...f[listName], val]
     }));
   };
+
   const saveEdit = async () => {
     if (!editForm.name || !editForm.price || isNaN(Number(editForm.price))) {
       showErrorToast("Name and valid price required.");
@@ -337,14 +340,12 @@ export default function ViewMenu() {
     }
   };
 
-  // DELETE logic
   const confirmDelete = async () => {
     if (selectedIds.length === 0) return;
     const confirm = await showConfirmToast(`Delete ${selectedIds.length} selected item(s)?`);
     if (!confirm) return;
     setShowDeleteConfirm(false);
 
-    // Delete category/ingredient links for each item (FK clean)
     for (const id of selectedIds) {
       await supabase.from("menuitem_categories").delete().eq("menuitemid", id);
       await supabase.from("menuitem_ingredients").delete().eq("menuitemid", id);
@@ -356,23 +357,24 @@ export default function ViewMenu() {
     fetchMenu();
   };
 
-  // Filter/search logic
   const filteredItems = menuItems.filter(
     (item) =>
       item.name.toLowerCase().includes(search.toLowerCase()) ||
       (item.description || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loadingUser)
+  if (loadingUser) {
     return <div style={{ minHeight: "100vh" }}>Loading vendor...</div>;
+  }
 
-  // Styles for a spanning grid
+  // Styles
   const cardGridStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
-    gap: "2rem",
+    gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))",
+    gap: "1.5rem",
     marginTop: "1.5rem"
   };
+
   const modalStyle = {
     minWidth: 400,
     width: "100%",
@@ -383,6 +385,7 @@ export default function ViewMenu() {
     borderRadius: "1.25rem",
     boxShadow: "0 6px 36px rgba(0,0,0,0.13)"
   };
+
   const fakeScrollStyle = {
     maxHeight: 180,
     overflowY: "auto",
@@ -410,6 +413,7 @@ export default function ViewMenu() {
           </button>
         </div>
       </div>
+      
       <div className="container" style={{ marginTop: "var(--spacing-6)" }}>
         <div className="flex justify-between items-center gap-4" style={{ marginBottom: "var(--spacing-4)" }}>
           <div className="input-with-icon" style={{ maxWidth: 400 }}>
@@ -454,10 +458,9 @@ export default function ViewMenu() {
                     : "var(--card)",
                   position: "relative",
                   transition: "all 0.2s",
-                  minHeight: 160,
                   display: "flex",
                   flexDirection: "column",
-                  padding: "2.2rem",
+                  padding: "1.5rem",
                   fontSize: 17
                 }}
               >
@@ -466,7 +469,7 @@ export default function ViewMenu() {
                   checked={selectedIds.includes(item.menuitemid)}
                   onChange={() => toggleSelect(item.menuitemid)}
                   style={{
-                    position: "absolute", top: 20, right: 20, width: 24, height: 24, cursor: "pointer"
+                    position: "absolute", top: 15, right: 15, width: 20, height: 20, cursor: "pointer"
                   }}
                 />
                 
@@ -553,7 +556,8 @@ export default function ViewMenu() {
         )}
       </div>
 
-      {/* CREATE MODAL */}
+      {/* Modals for Create, Edit, and Delete remain unchanged... */}
+            {/* CREATE MODAL */}
       {showCreate && (
         <div
           style={{
@@ -885,3 +889,5 @@ export default function ViewMenu() {
     </div>
   );
 }
+
+  
