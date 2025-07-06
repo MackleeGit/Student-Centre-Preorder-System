@@ -185,7 +185,7 @@ const Index = () => {
 
             <footer className="footer">
                 <div className="container text-center">
-                    <p>&copy; {new Date().getFullYear()} STC Preorder System. All rights reserved.</p>
+                    <p>&copy; {new Date().getFullYear()} STC Food Preorder. All rights reserved.</p>
                 </div>
             </footer>
         </div>

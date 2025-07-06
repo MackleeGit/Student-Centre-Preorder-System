@@ -786,4 +786,19 @@ input:checked + .slider:before {
   max-height: 400px;
   overflow-y: auto;
 }
+/* === Placeholder Card Styles === */
+.placeholder-shimmer {
+  animation: shimmer 1.5s linear infinite;
+  background: linear-gradient(to right, #eeeeee 8%, #dddddd 18%, #eeeeee 33%);
+  background-size: 800px 104px;
+  position: relative;
+}
 
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
