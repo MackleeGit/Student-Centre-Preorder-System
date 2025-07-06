@@ -162,7 +162,7 @@ export default function ViewAnalytics() {
         <div className="container flex items-center justify-between">
           <button className="btn btn-ghost" onClick={() => window.history.back()}>Back</button>
           <h1 className="header-title">Business Analytics</h1>
-          <span style={{ fontWeight: 500 }}>{vendorName && <>Vendor: <span style={{ color: "var(--primary)" }}>{vendorName}</span></>}</span>
+          <span style={{ fontWeight: 500 }}>{vendorName && <> <span style={{ color: "var(--primary)" }}>{vendorName}</span></>}</span>
         </div>
       </div>
       <div className="container" style={{ marginTop: "var(--spacing-6)" }}>
