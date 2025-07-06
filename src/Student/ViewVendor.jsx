@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ArrowLeft, Star, ShoppingCart, Plus, Minus, Search, Clock } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -371,7 +372,7 @@ const ViewVendor = () => {
                         <div className="card-header"><h3 className="card-title">About {vendor?.name}</h3></div>
                         <div className="card-content">
                             <div style={{ marginBottom: "var(--spacing-4)" }}>
-                                <strong>Date Joined:</strong> {vendor?.datejoined ? new Date(vendor.datejoined).toLocaleDateString() : 'N/A'}
+                                <strong>Date Joined:</strong> {vendor?.date_joined ? new Date(vendor.date_joined).toLocaleDateString() : 'N/A'}
                             </div>
                             <div>
                                 <strong>Description:</strong>
@@ -407,13 +408,48 @@ const ViewVendor = () => {
                                     const isSelected = selectedItems.some(selected => selected.menuitemid === item.menuitemid);
                                     return (
                                         <div key={item.menuitemid} className="card" onClick={() => handleItemSelect(item)} style={{ cursor: "pointer", border: isSelected ? "2px solid var(--primary)" : "1px solid var(--border)", background: isSelected ? "rgba(31, 41, 55, 0.05)" : "var(--card)", transform: isSelected ? "scale(1.02)" : "scale(1)", transition: "all 0.2s ease" }}>
+                                            {item.image_url && (
+                                                <div style={{ width: "100%", height: "160px", marginBottom: "var(--spacing-3)", borderRadius: "var(--radius)", overflow: "hidden" }}>
+                                                    <img 
+                                                        src={item.image_url} 
+                                                        alt={item.name}
+                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                                    />
+                                                </div>
+                                            )}
                                             <div style={{ marginBottom: "var(--spacing-2)" }}>
                                                 <h4 style={{ fontWeight: "600", marginBottom: "var(--spacing-1)" }}>{item.name}</h4>
-                                                <p style={{ color: "var(--muted-foreground)", fontSize: "0.875rem" }}>{item.description || 'Delicious menu item'}</p>
+                                                <p style={{ color: "var(--muted-foreground)", fontSize: "0.875rem", marginBottom: "var(--spacing-2)" }}>{item.description || 'Delicious menu item'}</p>
                                             </div>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--spacing-3)" }}>
                                                 <span style={{ fontSize: "1.1rem", fontWeight: "600", color: "var(--primary)" }}>${item.price}</span>
                                                 {isSelected && (<div style={{ background: "var(--primary)", color: "white", borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center" }}>✓</div>)}
+                                            </div>
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--spacing-1)" }}>
+                                                {item.category && (
+                                                    <span style={{ 
+                                                        background: "var(--secondary)", 
+                                                        color: "var(--secondary-foreground)", 
+                                                        padding: "2px 6px", 
+                                                        borderRadius: "var(--radius)", 
+                                                        fontSize: "0.75rem",
+                                                        fontWeight: "500"
+                                                    }}>
+                                                        {item.category}
+                                                    </span>
+                                                )}
+                                                {item.ingredients && (
+                                                    <span style={{ 
+                                                        background: "var(--muted)", 
+                                                        color: "var(--muted-foreground)", 
+                                                        padding: "2px 6px", 
+                                                        borderRadius: "var(--radius)", 
+                                                        fontSize: "0.75rem"
+                                                    }}>
+                                                        {item.ingredients}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -520,11 +556,52 @@ const ViewVendor = () => {
                                         <Search className="input-icon" size={16} />
                                         <input type="text" placeholder="Search menu items..." className="input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                                     </div>
-                                    <div className="grid grid-2 gap-4">
+                                    <div className="grid grid-2 gap-3">
                                         {filteredMenuItems.map((item) => (
-                                            <div key={item.menuitemid} className="card" style={{ cursor: "pointer" }}>
-                                                <div style={{ marginBottom: "var(--spacing-2)" }}><h4 style={{ fontWeight: "600", marginBottom: "var(--spacing-1)" }}>{item.name}</h4><p style={{ color: "var(--muted-foreground)", fontSize: "0.875rem" }}>{item.description || 'Delicious menu item'}</p></div>
-                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: "1.1rem", fontWeight: "600", color: "var(--primary)" }}>${item.price}</span><button className="btn btn-primary btn-sm" onClick={() => addToOrderFromWizard(item)}><Plus size={14} /> Add</button></div>
+                                            <div key={item.menuitemid} className="card" style={{ cursor: "pointer", padding: "var(--spacing-3)" }}>
+                                                {item.image_url && (
+                                                    <div style={{ width: "100%", height: "80px", marginBottom: "var(--spacing-2)", borderRadius: "var(--radius)", overflow: "hidden" }}>
+                                                        <img 
+                                                            src={item.image_url} 
+                                                            alt={item.name}
+                                                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div style={{ marginBottom: "var(--spacing-2)" }}>
+                                                    <h4 style={{ fontWeight: "600", marginBottom: "var(--spacing-1)", fontSize: "0.9rem" }}>{item.name}</h4>
+                                                    <p style={{ color: "var(--muted-foreground)", fontSize: "0.75rem", marginBottom: "var(--spacing-2)" }}>{item.description || 'Delicious menu item'}</p>
+                                                </div>
+                                                <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--spacing-1)", marginBottom: "var(--spacing-2)" }}>
+                                                    {item.category && (
+                                                        <span style={{ 
+                                                            background: "var(--secondary)", 
+                                                            color: "var(--secondary-foreground)", 
+                                                            padding: "1px 4px", 
+                                                            borderRadius: "var(--radius)", 
+                                                            fontSize: "0.65rem",
+                                                            fontWeight: "500"
+                                                        }}>
+                                                            {item.category}
+                                                        </span>
+                                                    )}
+                                                    {item.ingredients && (
+                                                        <span style={{ 
+                                                            background: "var(--muted)", 
+                                                            color: "var(--muted-foreground)", 
+                                                            padding: "1px 4px", 
+                                                            borderRadius: "var(--radius)", 
+                                                            fontSize: "0.65rem"
+                                                        }}>
+                                                            {item.ingredients}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <span style={{ fontSize: "1rem", fontWeight: "600", color: "var(--primary)" }}>${item.price}</span>
+                                                    <button className="btn btn-primary btn-sm" onClick={() => addToOrderFromWizard(item)} style={{ fontSize: "0.75rem", padding: "4px 8px" }}><Plus size={12} /> Add</button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

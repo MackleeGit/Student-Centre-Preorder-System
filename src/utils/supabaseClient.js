@@ -20,7 +20,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-console.log("🔥 Supabase Initialized:", supabase);
+console.log("🔥 Supabase Initialized:");
 
 // Export for use in other JS files
 export { supabase };

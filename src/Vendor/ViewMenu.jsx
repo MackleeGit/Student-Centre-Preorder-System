@@ -11,7 +11,10 @@ const PencilIcon = () => (
   <svg height="18" width="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>
 );
 const TrashIcon = () => (
-  <svg height="18" width="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3-3h8a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v0a2 2 0 0 1 2-2z" /></svg>
+  <svg height="18" width="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3-3h8a2 2 0 0 1 2 2v0a2 2 0 0 1-2-2H7a2 2 0 0 1 2-2z" /></svg>
+);
+const ImageIcon = () => (
+  <svg height="18" width="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
 );
 
 export default function ViewMenu() {
@@ -20,14 +23,15 @@ export default function ViewMenu() {
   const [menuItems, setMenuItems] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showEdit, setShowEdit] = useState(false);
-  const [editForm, setEditForm] = useState({ menuitemid: null, name: "", price: "", description: "", in_stock: "", categories: [], ingredients: [] });
+  const [editForm, setEditForm] = useState({ menuitemid: null, name: "", price: "", description: "", in_stock: "", categories: [], ingredients: [], image: null, imageUrl: "" });
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", price: "", description: "", in_stock: "", categories: [], ingredients: [] });
+  const [createForm, setCreateForm] = useState({ name: "", price: "", description: "", in_stock: "", categories: [], ingredients: [], image: null });
   const [categories, setCategories] = useState([]);
   const [ingredients, setIngredients] = useState([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const navigate = useNavigate();
 
   // Modal scroll lock
@@ -122,6 +126,29 @@ export default function ViewMenu() {
     setIngredients(data || []);
   };
 
+  // Image upload helper
+  const uploadImage = async (file, menuitemid) => {
+    if (!file) return null;
+    
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${menuitemid}_${Date.now()}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('menuitems')
+      .upload(fileName, file);
+    
+    if (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('menuitems')
+      .getPublicUrl(fileName);
+    
+    return publicUrl;
+  };
+
   // Select logic
   const toggleSelect = (id) => {
     setSelectedIds((prev) =>
@@ -134,6 +161,10 @@ export default function ViewMenu() {
   // -------- CREATE MENU ITEM --------
   const handleCreateForm = e => {
     setCreateForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  };
+  const handleCreateImageChange = (e) => {
+    const file = e.target.files[0];
+    setCreateForm(f => ({ ...f, image: file }));
   };
   const handleCreateMultiSelect = (listName, val) => {
     setCreateForm(f => ({
@@ -148,42 +179,66 @@ export default function ViewMenu() {
       showErrorToast("Name and valid price required.");
       return;
     }
-    // Create menuitem
-    const { data, error } = await supabase
-      .from("menuitems")
-      .insert({
-        vendorid: userData.vendorid,
-        name: createForm.name,
-        price: parseFloat(createForm.price),
-        in_stock: createForm.in_stock || null,
-        description: createForm.description,
-        created_at: new Date().toISOString()
-      })
-      .select("menuitemid")
-      .maybeSingle();
+    
+    setUploadingImage(true);
+    
+    try {
+      // Create menuitem first
+      const { data, error } = await supabase
+        .from("menuitems")
+        .insert({
+          vendorid: userData.vendorid,
+          name: createForm.name,
+          price: parseFloat(createForm.price),
+          in_stock: createForm.in_stock || null,
+          description: createForm.description,
+          created_at: new Date().toISOString()
+        })
+        .select("menuitemid")
+        .maybeSingle();
 
-    if (error || !data) {
-      showErrorToast(error?.message || "Error creating menu item.");
-      return;
-    }
+      if (error || !data) {
+        showErrorToast(error?.message || "Error creating menu item.");
+        return;
+      }
 
-    // Link to categories/ingredients many-to-many
-    const menuitemid = data.menuitemid;
-    if (createForm.categories.length > 0) {
-      await supabase.from("menuitem_categories").insert(
-        createForm.categories.map(cid => ({ menuitemid, categoryid: cid }))
-      );
-    }
-    if (createForm.ingredients.length > 0) {
-      await supabase.from("menuitem_ingredients").insert(
-        createForm.ingredients.map(iid => ({ menuitemid, ingredientid: iid }))
-      );
-    }
+      const menuitemid = data.menuitemid;
+      
+      // Upload image if provided
+      let imageUrl = null;
+      if (createForm.image) {
+        try {
+          imageUrl = await uploadImage(createForm.image, menuitemid);
+          // Update menuitem with image URL
+          await supabase
+            .from("menuitems")
+            .update({ image_url: imageUrl })
+            .eq("menuitemid", menuitemid);
+        } catch (imageError) {
+          console.error('Image upload failed:', imageError);
+          // Continue without image rather than failing the whole operation
+        }
+      }
 
-    showSuccessToast("Menu item created!");
-    setShowCreate(false);
-    setCreateForm({ name: "", price: "", in_stock: "", description: "", categories: [], ingredients: [] });
-    fetchMenu();
+      // Link to categories/ingredients many-to-many
+      if (createForm.categories.length > 0) {
+        await supabase.from("menuitem_categories").insert(
+          createForm.categories.map(cid => ({ menuitemid, categoryid: cid }))
+        );
+      }
+      if (createForm.ingredients.length > 0) {
+        await supabase.from("menuitem_ingredients").insert(
+          createForm.ingredients.map(iid => ({ menuitemid, ingredientid: iid }))
+        );
+      }
+
+      showSuccessToast("Menu item created!");
+      setShowCreate(false);
+      setCreateForm({ name: "", price: "", in_stock: "", description: "", categories: [], ingredients: [], image: null });
+      fetchMenu();
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   // -------- EDIT MENU ITEM --------
@@ -195,12 +250,18 @@ export default function ViewMenu() {
       description: item.description || "",
       in_stock: item.in_stock || "",
       categories: item.categories.map(c => c.categoryid),
-      ingredients: item.ingredients.map(i => i.ingredientid)
+      ingredients: item.ingredients.map(i => i.ingredientid),
+      image: null,
+      imageUrl: item.image_url || ""
     });
     setShowEdit(true);
   };
   const handleEditForm = e => {
     setEditForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  };
+  const handleEditImageChange = (e) => {
+    const file = e.target.files[0];
+    setEditForm(f => ({ ...f, image: file }));
   };
   const handleEditMultiSelect = (listName, val) => {
     setEditForm(f => ({
@@ -215,45 +276,65 @@ export default function ViewMenu() {
       showErrorToast("Name and valid price required.");
       return;
     }
-    // Update menuitem
-    const { error } = await supabase
-      .from("menuitems")
-      .update({
-        name: editForm.name,
-        price: parseFloat(editForm.price),
-        description: editForm.description,
-        in_stock: editForm.in_stock || null
-      })
-      .eq("menuitemid", editForm.menuitemid);
+    
+    setUploadingImage(true);
+    
+    try {
+      let imageUrl = editForm.imageUrl;
+      
+      // Upload new image if provided
+      if (editForm.image) {
+        try {
+          imageUrl = await uploadImage(editForm.image, editForm.menuitemid);
+        } catch (imageError) {
+          console.error('Image upload failed:', imageError);
+          showErrorToast("Image upload failed, but other changes will be saved.");
+        }
+      }
+      
+      // Update menuitem
+      const { error } = await supabase
+        .from("menuitems")
+        .update({
+          name: editForm.name,
+          price: parseFloat(editForm.price),
+          description: editForm.description,
+          in_stock: editForm.in_stock || null,
+          image_url: imageUrl
+        })
+        .eq("menuitemid", editForm.menuitemid);
 
-    if (error) {
-      showErrorToast(error.message || "Error updating.");
-      return;
+      if (error) {
+        showErrorToast(error.message || "Error updating.");
+        return;
+      }
+
+      // Unlink previous categories/ingredients
+      await supabase.from("menuitem_categories")
+        .delete()
+        .eq("menuitemid", editForm.menuitemid);
+      await supabase.from("menuitem_ingredients")
+        .delete()
+        .eq("menuitemid", editForm.menuitemid);
+
+      // Insert selected
+      if (editForm.categories.length > 0) {
+        await supabase.from("menuitem_categories").insert(
+          editForm.categories.map(cid => ({ menuitemid: editForm.menuitemid, categoryid: cid }))
+        );
+      }
+      if (editForm.ingredients.length > 0) {
+        await supabase.from("menuitem_ingredients").insert(
+          editForm.ingredients.map(iid => ({ menuitemid: editForm.menuitemid, ingredientid: iid }))
+        );
+      }
+
+      showSuccessToast("Menu item updated!");
+      setShowEdit(false);
+      fetchMenu();
+    } finally {
+      setUploadingImage(false);
     }
-
-    // Unlink previous categories/ingredients
-    await supabase.from("menuitem_categories")
-      .delete()
-      .eq("menuitemid", editForm.menuitemid);
-    await supabase.from("menuitem_ingredients")
-      .delete()
-      .eq("menuitemid", editForm.menuitemid);
-
-    // Insert selected
-    if (editForm.categories.length > 0) {
-      await supabase.from("menuitem_categories").insert(
-        editForm.categories.map(cid => ({ menuitemid: editForm.menuitemid, categoryid: cid }))
-      );
-    }
-    if (editForm.ingredients.length > 0) {
-      await supabase.from("menuitem_ingredients").insert(
-        editForm.ingredients.map(iid => ({ menuitemid: editForm.menuitemid, ingredientid: iid }))
-      );
-    }
-
-    showSuccessToast("Menu item updated!");
-    setShowEdit(false);
-    fetchMenu();
   };
 
   // DELETE logic
@@ -295,7 +376,7 @@ export default function ViewMenu() {
   const modalStyle = {
     minWidth: 400,
     width: "100%",
-    maxWidth: 680,
+    maxWidth: 720,
     padding: "var(--spacing-8)",
     position: "relative",
     background: "var(--card)",
@@ -388,6 +469,25 @@ export default function ViewMenu() {
                     position: "absolute", top: 20, right: 20, width: 24, height: 24, cursor: "pointer"
                   }}
                 />
+                
+                {/* Image section */}
+                {item.image_url && (
+                  <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      style={{
+                        width: "100%",
+                        maxWidth: 300,
+                        height: 200,
+                        objectFit: "cover",
+                        borderRadius: 12,
+                        border: "1px solid var(--border)"
+                      }}
+                    />
+                  </div>
+                )}
+                
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <h3 style={{ fontWeight: 700, marginBottom: 7, fontSize: "1.32rem", lineHeight: "140%" }}>{item.name}</h3>
                   <div>
@@ -501,6 +601,39 @@ export default function ViewMenu() {
                   <option value="in_stock">In Stock</option>
                   <option value="out_of_stock">Out of Stock</option>
                 </select>
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, display: "block" }}>
+                    <ImageIcon /> Menu Item Image
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCreateImageChange}
+                    style={{ 
+                      width: "100%", 
+                      padding: "8px",
+                      border: "1px solid var(--border)",
+                      borderRadius: "8px",
+                      fontSize: 16
+                    }}
+                  />
+                  {createForm.image && (
+                    <div style={{ marginTop: 12, textAlign: "center" }}>
+                      <img
+                        src={URL.createObjectURL(createForm.image)}
+                        alt="Preview"
+                        style={{
+                          width: "100%",
+                          maxWidth: 200,
+                          height: 120,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          border: "1px solid var(--border)"
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
                 <textarea
                   className="input"
                   placeholder="Description"
@@ -554,7 +687,14 @@ export default function ViewMenu() {
               </div>
             </div>
             <div className="flex gap-2 justify-end" style={{ marginTop: 28 }}>
-              <button className="btn btn-primary btn-sm" onClick={saveCreate} style={{ minWidth: 80, fontSize: 16 }}>Save</button>
+              <button 
+                className="btn btn-primary btn-sm" 
+                onClick={saveCreate} 
+                disabled={uploadingImage}
+                style={{ minWidth: 80, fontSize: 16 }}
+              >
+                {uploadingImage ? "Saving..." : "Save"}
+              </button>
               <button className="btn btn-outline btn-sm" onClick={() => setShowCreate(false)} style={{ minWidth: 80, fontSize: 16 }}>Cancel</button>
             </div>
           </div>
@@ -608,6 +748,39 @@ export default function ViewMenu() {
                   <option value="in_stock">In Stock</option>
                   <option value="out_of_stock">Out of Stock</option>
                 </select>
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, display: "block" }}>
+                    <ImageIcon /> Menu Item Image
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditImageChange}
+                    style={{ 
+                      width: "100%", 
+                      padding: "8px",
+                      border: "1px solid var(--border)",
+                      borderRadius: "8px",
+                      fontSize: 16
+                    }}
+                  />
+                  {(editForm.image || editForm.imageUrl) && (
+                    <div style={{ marginTop: 12, textAlign: "center" }}>
+                      <img
+                        src={editForm.image ? URL.createObjectURL(editForm.image) : editForm.imageUrl}
+                        alt="Preview"
+                        style={{
+                          width: "100%",
+                          maxWidth: 200,
+                          height: 120,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          border: "1px solid var(--border)"
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
                 <textarea
                   className="input"
                   placeholder="Description"
@@ -661,7 +834,14 @@ export default function ViewMenu() {
               </div>
             </div>
             <div className="flex gap-2 justify-end" style={{ marginTop: 28 }}>
-              <button className="btn btn-primary btn-sm" onClick={saveEdit} style={{ minWidth: 80, fontSize: 16 }}>Save</button>
+              <button 
+                className="btn btn-primary btn-sm" 
+                onClick={saveEdit} 
+                disabled={uploadingImage}
+                style={{ minWidth: 80, fontSize: 16 }}
+              >
+                {uploadingImage ? "Saving..." : "Save"}
+              </button>
               <button className="btn btn-outline btn-sm" onClick={() => setShowEdit(false)} style={{ minWidth: 80, fontSize: 16 }}>Cancel</button>
             </div>
           </div>

@@ -335,18 +335,12 @@ const VendorDashboard = () => {
     <div style={{ minHeight: '100vh', background: 'var(--muted)' }}>
       {/* Header */}
       <header className="header">
-        <div className="container">
-          <div className="flex items-center justify-between">
+        <div className="container header-container">
+          <div className="flex items-center justify-between flex-nowrap">
             <h1 className="header-title">Vendor Dashboard</h1>
             <div className="flex items-center gap-4">
               <div className="input-with-icon">
-                <Search className="input-icon" size={16} />
-                <input
-                  type="text"
-                  placeholder="Search orders..."
-                  className="input"
-                  style={{ paddingLeft: '2.5rem' }}
-                />
+              
               </div>
               <div className="notification-dropdown">
                 <button

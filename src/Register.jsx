@@ -5,8 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { registerUser, loginUser } from "./utils/authUtils.js";
 import { showSuccessToast, showErrorToast, showConfirmToast } from "./components/Toast/toastUtils.jsx";
 
-
-
 const roles = ["student", "vendor"];
 
 const Register = () => {
@@ -16,6 +14,8 @@ const Register = () => {
     const [fname, setFName] = useState("");
     const [lname, setLName] = useState("");
     const [vendorName, setVendorName] = useState(""); // Vendor-specific
+    const [vendorDescription, setVendorDescription] = useState(""); // Vendor description
+    const [banner, setBanner] = useState(null); // Vendor banner file
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const navigate = useNavigate();
@@ -26,11 +26,19 @@ const Register = () => {
             return;
         }
 
+        // Check if banner is provided for vendors
+        if (role === "vendor" && !banner) {
+            showErrorToast("Banner image is required for vendor registration!", "Registration Error");
+            return;
+        }
+
         const extraFields = {
             studentId,
             fname,
             lname,
-            vendorName
+            vendorName,
+            banner,
+            description
         };
 
         try {
@@ -71,6 +79,7 @@ const Register = () => {
                                     setEmail("");
                                     setStudentId("");
                                     setVendorName("");
+                                    setBanner(null);
                                     setPassword("");
                                     setConfirmPassword("");
                                     setFName("");
@@ -117,7 +126,7 @@ const Register = () => {
                         </div>
                     )}
 
-                    {activeRole === "vendor" && (
+                     {activeRole === "vendor" && (
                         <div className="tab-content" key="vendor">
                             <div className="form-group">
                                 <label htmlFor="vendorName">Vendor Name</label>
@@ -129,9 +138,29 @@ const Register = () => {
                                     placeholder="Enter your vendor name"
                                 />
                             </div>
+                            <div className="form-group">
+                                <label htmlFor="vendorDescription">Description</label>
+                                <textarea
+                                    id="vendorDescription"
+                                    value={vendorDescription}
+                                    onChange={(e) => setVendorDescription(e.target.value)}
+                                    placeholder="Describe your business and what you offer"
+                                    rows="3"
+                                    className="form-textarea"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="banner">Banner Image *</label>
+                                <input
+                                    id="banner"
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => setBanner(e.target.files[0])}
+                                    required
+                                />
+                            </div>
                         </div>
                     )}
-
                     {/* Common Fields */}
                     <div className="form-group">
                         <label htmlFor="email">Email</label>

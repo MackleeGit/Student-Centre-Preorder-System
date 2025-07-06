@@ -93,6 +93,16 @@ body {
   color: var(--foreground);
 }
 
+.form-group textarea {
+  width: 100%;
+  padding: var(--spacing-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
 .form-group input:focus {
   outline: none;
   border-color: var(--primary);

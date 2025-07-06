@@ -40,7 +40,7 @@ export const useStudentOrders = (studentNumber) => {
   const fetchAvailableVendors = async () => {
     const { data, error } = await supabase
       .from("vendors")
-      .select("vendorid, name, image_url, availability")
+      .select("vendorid, name, banner_url, availability")
       .eq("approval_status", "approved")
       .eq("availability", "open");
 

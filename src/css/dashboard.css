@@ -786,3 +786,4 @@ input:checked + .slider:before {
   max-height: 400px;
   overflow-y: auto;
 }
+

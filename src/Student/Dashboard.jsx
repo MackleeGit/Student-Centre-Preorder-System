@@ -216,7 +216,7 @@ const StudentDashboard = () => {
 
         const { data: vendorResults, error: vendorError } = await supabase
             .from('vendors')
-            .select('vendorid, name, image_url')
+            .select('vendorid, name, banner_url')
             .ilike('name', `%${searchTerm}%`);
 
         if (!vendorError && vendorResults) {

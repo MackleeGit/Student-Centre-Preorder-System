@@ -1,7 +1,6 @@
 import { supabase } from "./supabaseClient";
 import { showErrorToast } from "../components/Toast/toastUtils.jsx";
 
-
 // Check if user is logged in
 export const checkAuth = async (navigate) => {
   const { data } = await supabase.auth.getSession();
@@ -36,11 +35,37 @@ export const registerUser = async ({ role, email, password, extraFields }) => {
       });
       if (error) throw error;
     } else if (role === "vendor") {
-      // You should do the same for vendors
+      let bannerUrl = null;
+
+      // Upload banner to Supabase storage if provided
+      if (extraFields.banner) {
+        const fileExt = extraFields.banner.name.split('.').pop();
+        const fileName = `${userId}-${Date.now()}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('vendors')
+          .upload(fileName, extraFields.banner);
+
+        if (uploadError) {
+          console.error('Banner upload error:', uploadError);
+          throw new Error('Failed to upload banner image');
+        }
+
+        // Get the public URL for the uploaded banner
+        const { data: urlData } = supabase.storage
+          .from('vendors')
+          .getPublicUrl(fileName);
+        
+        bannerUrl = urlData.publicUrl;
+      }
+
+      // the same for vendors
       const { error } = await supabase.from("vendors").insert({
-        user_id: userId, // Also add the user_id link for vendors
+        vendorid: userId, // Also add the user_id link for vendors
         name: extraFields.vendorName,
         email: email,
+        banner_url: bannerUrl,
+        description: extraFields.description || "", //Description
         // ... other vendor fields
       });
       if (error) throw error;
@@ -53,7 +78,6 @@ export const registerUser = async ({ role, email, password, extraFields }) => {
     throw dbError;
   }
 };
-
 
 // Login user
 export const loginUser = async ({ unameemail, password, role, navigate }) => {
@@ -129,12 +153,12 @@ export const loginUser = async ({ unameemail, password, role, navigate }) => {
     throw err;
   }
 };
+
 // Logout
 export const logoutUser = async (navigate) => {
   await supabase.auth.signOut();
   navigate("/login");
 };
-
 
 export const checkUserRole = async (expectedRole, navigate) => {
   const { data: authData, error: authError } = await supabase.auth.getUser();
