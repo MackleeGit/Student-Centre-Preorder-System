@@ -45,6 +45,7 @@ function App() {
         <Route path="/student/vieworders" element={<ViewOrders />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/vendor/viewmenu" element={<ViewMenu />} />
+        <Route path="/vendor/:vendorid" element={<ViewVendor />} />
 
         <Route path="/admin/studentmanagement" element={<AdminStudentManagement />} />
         <Route path="/admin/vendormanagement" element={<AdminVendorManagement />} />
