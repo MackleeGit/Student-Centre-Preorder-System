@@ -1,4 +1,4 @@
-// File: netlify/functions/stkPush.mjs
+// File: netlify/functions/stkPush.js
 import axios from "axios";
 
 export async function handler(event) {

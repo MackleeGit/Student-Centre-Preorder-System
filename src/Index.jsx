@@ -61,7 +61,7 @@ const Index = () => {
     if (loading) {
         return (
             <div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <p>Loading available vendors...</p>
+                <p>Loading Site...</p>
             </div>
         );
     }

@@ -5,6 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
+  envPrefix: 'VITE_',
   plugins: [
     react(),
     VitePWA({
@@ -13,7 +14,7 @@ export default defineConfig({
         'favicon.ico',
         'apple-touch-icon.png',
         'favicon.svg',
-    
+
       ],
       manifest: {
         name: 'STC Preorder System',
