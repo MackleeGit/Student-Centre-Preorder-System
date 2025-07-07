@@ -23,6 +23,7 @@ const StudentDashboard = () => {
     const [menuResults, setMenuResults] = useState([]);
     const [vendorResults, setVendorResults] = useState([]);
     const [vendors, setVendors] = useState([]);
+    const [vendorMap, setVendorMap] = useState({});
 
     useEffect(() => {
         checkAuth(navigate);
@@ -54,6 +55,25 @@ const StudentDashboard = () => {
             setLoadingUser(false);
         };
         fetchStudent();
+    }, []);
+
+    // Fetch all vendors to create a mapping
+    useEffect(() => {
+        const fetchVendors = async () => {
+            const { data: vendorsData, error } = await supabase
+                .from('vendors')
+                .select('vendorid, name');
+            
+            if (!error && vendorsData) {
+                const mapping = {};
+                vendorsData.forEach(vendor => {
+                    mapping[vendor.vendorid] = vendor.name;
+                });
+                setVendorMap(mapping);
+            }
+        };
+        
+        fetchVendors();
     }, []);
 
     const {
@@ -176,6 +196,16 @@ const StudentDashboard = () => {
     }
   };
 
+    // Helper function to get vendor name
+    const getVendorName = (vendorid) => {
+        return vendorMap[vendorid] || `Vendor ID: ${vendorid}`;
+    };
+
+    // Helper function to format total
+    const formatTotal = (total) => {
+        if (total === null || total === undefined) return 'N/A';
+        return parseFloat(total).toFixed(2);
+    };
 
     // Modal scroll lock
     useEffect(() => {
@@ -186,7 +216,9 @@ const StudentDashboard = () => {
         }
     }, [showOrderModal]);
 
-    if (loadingUser || initialOrderLoading || initialNotificationLoading) return <p>Loading dashboard...</p>;
+    if (loadingUser || initialOrderLoading || initialNotificationLoading) return  <div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <p>Loading Dashboard...</p>
+            </div>;
 
     const unreadCount = notifications.filter(notif => !notif.read).length;
 
@@ -390,11 +422,11 @@ const StudentDashboard = () => {
                                     >
                                         <div className="order-info">
                                             <h3>Order #{activeorder.orderid}</h3>
-                                            <p>Vendor ID: {activeorder.vendorid}</p>
-                                            <p>${activeorder.total || 'N/A'}</p>
+                                            <p>Vendor: {getVendorName(activeorder.vendorid)}</p>
+                                            <p>${formatTotal(activeorder.total)}</p>
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)" }}>
-                                           {getStatusBadge(activeorder.order_status)};
+                                           {getStatusBadge(activeorder.order_status)}
                                             <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-1)", fontSize: "0.75rem", color: "var(--muted-foreground)" }}>
                                                 <Clock size={12} />
                                                 {new Date(activeorder.created_at).toLocaleDateString()}
@@ -422,7 +454,7 @@ const StudentDashboard = () => {
                                 <div key={vendor.vendorid} className="vendor-item">
                                     <div className="vendor-info">
                                         <h3>{vendor.name}</h3>
-                                        <p>{vendor.items || 0} items • ⭐ {vendor.rating || 5}</p>
+                                 
                                     </div>
                                     <div className="vendor-actions">
                                         <span 
@@ -467,9 +499,9 @@ const StudentDashboard = () => {
                                 >
                                     <div className="order-info">
                                         <h3>Order #{order.orderid}</h3>
-                                        <p>${order.total || 'N/A'} • {new Date(order.created_at).toLocaleDateString()}</p>
+                                        <p>${formatTotal(order.total)} • {new Date(order.created_at).toLocaleDateString()}</p>
                                     </div>
-                                    {getStatusBadge(order.order_status)};
+                                    {getStatusBadge(order.order_status)}
                                 </div>
                             ))}
                             <Link
@@ -534,9 +566,9 @@ const StudentDashboard = () => {
                                 <p><strong>Approved At:</strong> {new Date(selectedOrder.time_accepted).toLocaleString()}</p>
                             )}
                             <p><strong>Status:</strong> 
-                                {getStatusBadge(selectedOrder.order_status)};
+                                {getStatusBadge(selectedOrder.order_status)}
                             </p>
-                            <p><strong>Total:</strong> ${selectedOrder.total || 'N/A'}</p>
+                            <p><strong>Total:</strong> ${formatTotal(selectedOrder.total)}</p>
                         </div>
 
                         <div>

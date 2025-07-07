@@ -62,9 +62,9 @@ const ViewOrders = () => {
                 vendorid,
                 student_number,
                 created_at,
-                approved_at,
+                time_accepted,
                 order_status,
-                total_price,
+                total,
                 vendors (name),
                 order_items (
                     quantity,
@@ -101,7 +101,7 @@ const ViewOrders = () => {
                 created_at,
                 approved_at,
                 order_status,
-                total_price,
+                total,
                 vendors (name),
                 order_items (
                     quantity,
@@ -234,7 +234,7 @@ const ViewOrders = () => {
                                                 >
                                                     {order.order_status}
                                                 </span>
-                                                <span>${order.total_price || 'N/A'}</span>
+                                                <span>${order.total || 'N/A'}</span>
                                                 <span>
                                                     {order.approved_at ? new Date(order.approved_at).toLocaleDateString() : 'Pending'}
                                                 </span>
@@ -302,7 +302,7 @@ const ViewOrders = () => {
                                                 >
                                                     {order.order_status}
                                                 </span>
-                                                <span>${order.total_price || 'N/A'}</span>
+                                                <span>${order.total || 'N/A'}</span>
                                                 <span>
                                                     {order.approved_at ? new Date(order.approved_at).toLocaleDateString() : 'N/A'}
                                                 </span>
@@ -405,7 +405,7 @@ const ViewOrders = () => {
                                     {selectedOrder.order_status}
                                 </span>
                             </p>
-                            <p><strong>Total:</strong> ${selectedOrder.total_price || 'N/A'}</p>
+                            <p><strong>Total:</strong> ${selectedOrder.total || 'N/A'}</p>
                         </div>
 
                         <div>

@@ -15,7 +15,7 @@ export const useStudentOrders = (studentNumber) => {
 
     const { data, error } = await supabase
       .from("orders")
-      .select("orderid, vendorid, order_status, created_at, time_accepted")
+      .select("orderid, vendorid, order_status, created_at, time_accepted,total")
       .eq("student_number", studentNumber)
       .order("created_at", { ascending: false });
 
@@ -67,7 +67,7 @@ export const useStudentOrders = (studentNumber) => {
 
     const { data, error } = await supabase
       .from("orders")
-      .select("orderid, vendorid, order_status, created_at, time_accepted")
+      .select("orderid, vendorid, order_status, created_at, time_accepted, total")
       .eq("student_number", studentNumber)
       .order("created_at", { ascending: false });
 
