@@ -99,7 +99,7 @@ const ViewOrders = () => {
                 vendorid,
                 student_number,
                 created_at,
-                approved_at,
+                time_accepted,
                 order_status,
                 total,
                 vendors (name),
@@ -236,7 +236,7 @@ const ViewOrders = () => {
                                                 </span>
                                                 <span>${order.total || 'N/A'}</span>
                                                 <span>
-                                                    {order.approved_at ? new Date(order.approved_at).toLocaleDateString() : 'Pending'}
+                                                    {order.time_accepted ? new Date(order.time_accepted).toLocaleDateString() : 'Pending'}
                                                 </span>
                                                 <button
                                                     className="btn btn-outline btn-sm"
@@ -304,7 +304,7 @@ const ViewOrders = () => {
                                                 </span>
                                                 <span>${order.total || 'N/A'}</span>
                                                 <span>
-                                                    {order.approved_at ? new Date(order.approved_at).toLocaleDateString() : 'N/A'}
+                                                    {order.time_accepted ? new Date(order.time_accepted).toLocaleDateString() : 'N/A'}
                                                 </span>
                                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                     <button
@@ -388,8 +388,8 @@ const ViewOrders = () => {
                             <p><strong>Order ID:</strong> #{selectedOrder.orderid}</p>
                             <p><strong>Vendor:</strong> {selectedOrder.vendors?.name || `Vendor ID: ${selectedOrder.vendorid}`}</p>
                             <p><strong>Created At:</strong> {new Date(selectedOrder.created_at).toLocaleString()}</p>
-                            {selectedOrder.approved_at && (
-                                <p><strong>Approved At:</strong> {new Date(selectedOrder.approved_at).toLocaleString()}</p>
+                            {selectedOrder.time_accepted && (
+                                <p><strong>Approved At:</strong> {new Date(selectedOrder.time_accepted).toLocaleString()}</p>
                             )}
                             <p><strong>Status:</strong> 
                                 <span 
