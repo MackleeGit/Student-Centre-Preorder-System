@@ -465,7 +465,7 @@ const VendorDashboard = () => {
 
                       </p>
                       <p style={{ fontWeight: 600, marginTop: 'var(--spacing-1)' }}>
-                        ${(order.total_amount || 0).toFixed(2)}
+                        ${(order.total || 0).toFixed(2)}
                       </p>
                     </div>
                     <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
@@ -531,7 +531,7 @@ const VendorDashboard = () => {
                         {(order.items || []).join(', ')}
                       </p>
                       <p style={{ fontWeight: 600, marginTop: 'var(--spacing-1)' }}>
-                        ${(order.total_amount || 0).toFixed(2)}
+                        ${(order.total || 0).toFixed(2)}
                       </p>
                     </div>
                     <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
@@ -615,7 +615,7 @@ const VendorDashboard = () => {
                         {(order.items || []).join(', ')}
                       </p>
                       <p style={{ fontWeight: 600, marginTop: 'var(--spacing-1)' }}>
-                        ${(order.total_amount || 0).toFixed(2)}
+                        ${(order.total || 0).toFixed(2)}
                       </p>
                     </div>
                     <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
@@ -693,7 +693,7 @@ const VendorDashboard = () => {
                         {(order.items || []).join(', ')}
                       </p>
                       <p style={{ fontWeight: 600, marginTop: 'var(--spacing-1)' }}>
-                        ${(order.total_amount || 0).toFixed(2)}
+                        ${(order.total || 0).toFixed(2)}
                       </p>
                     </div>
                     <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
